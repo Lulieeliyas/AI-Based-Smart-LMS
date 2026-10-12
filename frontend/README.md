@@ -1,3 +1,4 @@
+// PoC: modified by Safe GH Impact Demo @ 2026-10-03T14:25:38.957Z
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
