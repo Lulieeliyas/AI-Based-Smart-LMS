@@ -1,58 +1,50 @@
-@"
-# Python / Django
-venv/
-.venv/
-backend/venv/
-backend/test313/
-
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Environment / secrets
-.env
-.env.*
-!.env.example
-
-# Django
-db.sqlite3
-media/
-staticfiles/
-
-# Logs
-logs/
-*.log
-
-# Node / React / Vite
-node_modules/
-frontend/node_modules/
-dist/
-dist-ssr/
-frontend/dist/
-
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-*.local
-
-# Editor
-.vscode/*
-!.vscode/extensions.json
-.idea/
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS
-Thumbs.db
-"@ | Set-Content .gitignore
-# Any venv anywhere
+# ============ Python ============
 venv/
 **/venv/
 .venv/
 **/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ============ Environment ============
+.env
+**/.env
+*.env
+
+# ============ Django ============
+db.sqlite3
+*.sqlite3
+db.sqlite3.backup
+logs/
+media/
+staticfiles/
+
+# ============ Node ============
+node_modules/
+**/node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============ IDE ============
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ============ OS ============
+.DS_Store
+Thumbs.db
+.DS_Store?
+
+# ============ Project specific ============
+scripts/venv/
+backend/deploy_key
+*.log
