@@ -51,3 +51,8 @@ lerna-debug.log*
 # OS
 Thumbs.db
 "@ | Set-Content .gitignore
+# Any venv anywhere
+venv/
+**/venv/
+.venv/
+**/.venv/
