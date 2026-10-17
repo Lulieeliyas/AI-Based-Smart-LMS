@@ -295,35 +295,6 @@ CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', 'your-chapa-secret-key')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', 'your-chapa-public-key')
 CHAPA_WEBHOOK_SECRET = os.getenv('CHAPA_WEBHOOK_SECRET', 'your-webhook-secret')
 
-from config.database import DATABASES  # noqa
-# remove old DATABASES block if duplicated
-
-INSTALLED_APPS += [
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
-    'apps.users',
-    'apps.books',
-    'apps.borrowing',
-    'apps.digital_resources',
-    'apps.notifications',
-    'apps.reports',
-    'apps.ai_recommendations',
-]
-
 MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 
 CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
-
-AUTH_USER_MODEL = 'users.User'
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'core.pagination.StandardPagination',
-    'PAGE_SIZE': 20,
-}
