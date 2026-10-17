@@ -15,7 +15,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here-make-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+import os
+
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "ai-library-backend-u07r.onrender.com",
+    "ai-based-smart-lms.vercel.app",
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -135,6 +142,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://ai-based-smart-lms.vercel.app",
+    "http://localhost:5173",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
