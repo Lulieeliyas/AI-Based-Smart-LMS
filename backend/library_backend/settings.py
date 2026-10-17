@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
+
 # Load environment variables
 load_dotenv()
 
@@ -12,10 +13,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here-make-it-at-least-32-characters')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# ==========================================
+# ✅ PRODUCTION FIX: DEBUG & ALLOWED_HOSTS
+# ==========================================
+# Defaults to True and localhost for local dev, but reads from Render in production
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -54,11 +57,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'library_backend.urls'
 
-# ✅ FIXED: Added templates directory
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # ✅ Added templates directory
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -73,10 +75,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'library_backend.wsgi.application'
 
-# ============ DATABASE CONFIGURATION - MySQL ============
+# ============ DATABASE CONFIGURATION - PostgreSQL / MySQL ============
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
+    # Render PostgreSQL
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
@@ -84,6 +87,7 @@ if DATABASE_URL:
         )
     }
 else:
+    # Local MySQL
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
@@ -126,23 +130,42 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+# ==========================================
+# ✅ PRODUCTION FIX: CORS & CSRF SETTINGS
+# ==========================================
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
+# Default localhost URLs for development
+BASE_CORS_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-CSRF_TRUSTED_ORIGINS = [
+# Read production URLs from Render Environment Variables
+env_cors = os.getenv("CORS_ALLOWED_ORIGINS")
+if env_cors:
+    # Split comma-separated list and add to allowed origins
+    CORS_ALLOWED_ORIGINS = BASE_CORS_ORIGINS + [origin.strip() for origin in env_cors.split(',')]
+else:
+    CORS_ALLOWED_ORIGINS = BASE_CORS_ORIGINS
+
+BASE_CSRF_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+env_csrf = os.getenv("CSRF_TRUSTED_ORIGINS")
+if env_csrf:
+    CSRF_TRUSTED_ORIGINS = BASE_CSRF_ORIGINS + [origin.strip() for origin in env_csrf.split(',')]
+else:
+    CSRF_TRUSTED_ORIGINS = BASE_CSRF_ORIGINS
+
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -254,20 +277,16 @@ LOGGING = {
     },
 }
 
-
 # AI Recommendation Settings
 AI_MODEL_PATH = BASE_DIR / 'models' / 'recommendations'
-AI_CONTENT_WEIGHT = 0.6  # Weight for content-based recommendations
-AI_COLLAB_WEIGHT = 0.4   # Weight for collaborative recommendations
-AI_MIN_USER_ACTIVITIES = 5  # Minimum activities before using collaborative filtering
-AI_RECOMMENDATION_LIMIT = 10  # Default number of recommendations
-AI_SIMILARITY_THRESHOLD = 0.3  # Threshold for similar books
-AI_UPDATE_INTERVAL_HOURS = 24  # How often to refresh recommendations
+AI_CONTENT_WEIGHT = 0.6  
+AI_COLLAB_WEIGHT = 0.4   
+AI_MIN_USER_ACTIVITIES = 5  
+AI_RECOMMENDATION_LIMIT = 10  
+AI_SIMILARITY_THRESHOLD = 0.3  
+AI_UPDATE_INTERVAL_HOURS = 24  
 
 # ============ EMAIL CONFIGURATION ============
-
-# ✅ Email backend - Use console for development (prints emails to terminal)
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
@@ -277,34 +296,24 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@library.com')
 
-
-# Timeout for email sending
 EMAIL_TIMEOUT = 30
 
 # ============ SMS CONFIGURATION ============
 SMS_PROVIDER = os.getenv('SMS_PROVIDER', 'africastalking')
 
-# Africa's Talking
 AT_USERNAME = os.getenv('AT_USERNAME', 'sandbox')
 AT_API_KEY = os.getenv('AT_API_KEY', '')
 AT_SENDER_ID = os.getenv('AT_SENDER_ID', 'LIBRARY')
 
-# Twilio (optional)
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
 TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
 
-# ✅ Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
-# ✅ Skip email verification in development (auto-verify users)
 SKIP_EMAIL_VERIFICATION = False
 
 # Chapa Payment Configuration
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', 'your-chapa-secret-key')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', 'your-chapa-public-key')
 CHAPA_WEBHOOK_SECRET = os.getenv('CHAPA_WEBHOOK_SECRET', 'your-webhook-secret')
-
-MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
-
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
