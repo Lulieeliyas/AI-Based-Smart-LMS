@@ -3,8 +3,8 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from django.db.models import Count
 
-from apps.borrowing.models import Borrow
-from apps.books.models import BookReview
+from apps.borrowing.models import BorrowRecord
+from apps.books.models import Rating
 
 
 def user_based(user_id, top_n=8):
@@ -14,10 +14,10 @@ def user_based(user_id, top_n=8):
     Returns a list of recommended book IDs.
     """
     reviews = list(
-        BookReview.objects.values(
+        Rating.objects.values(
             "user_id",
             "book_id",
-            "rating",
+            "score",
         )
     )
 
@@ -31,7 +31,7 @@ def user_based(user_id, top_n=8):
     pivot = df.pivot_table(
         index="user_id",
         columns="book_id",
-        values="rating",
+        values="score",
         aggfunc="mean",
         fill_value=0,
     )
@@ -91,7 +91,7 @@ def popular_books(top_n=8):
     Useful as a fallback for users without enough ratings.
     """
     borrow_counts = (
-        Borrow.objects
+        BorrowRecord.objects
         .values("book_id")
         .annotate(total_borrows=Count("id"))
         .order_by("-total_borrows", "book_id")

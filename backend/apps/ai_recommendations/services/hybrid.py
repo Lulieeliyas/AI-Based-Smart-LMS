@@ -1,7 +1,7 @@
 
 from .content_based import get_similar
 from .collaborative import user_based, popular_books
-from apps.borrowing.models import Borrow
+from apps.borrowing.models import BorrowRecord
 
 
 def recommend_for_user(user_id, top_n=10):
@@ -39,9 +39,9 @@ def recommend_for_user(user_id, top_n=10):
 
     # Step 2: Find the user's most recently borrowed book.
     last_borrowed_book_id = (
-        Borrow.objects
+        BorrowRecord.objects
         .filter(user_id=user_id)
-        .order_by("-borrow_date", "-id")
+        .order_by("-issue_date", "-id")
         .values_list("book_id", flat=True)
         .first()
     )
