@@ -2,7 +2,7 @@ from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
 from datetime import timedelta
 from apps.books.models import Book
-from apps.borrowing.models import Borrow
+from apps.borrowing.models import BorrowRecord
 from apps.users.models import User
 
 class LibraryAnalytics:
@@ -10,10 +10,10 @@ class LibraryAnalytics:
     @staticmethod
     def get_borrowing_statistics():
         """Get overall borrowing statistics."""
-        total_borrowings = Borrow.objects.count()
-        active_borrowings = Borrow.objects.filter(status__in=['borrowed', 'overdue']).count()
-        returned_borrowings = Borrow.objects.filter(status='returned').count()
-        overdue_borrowings = Borrow.objects.filter(status='overdue').count()
+        total_borrowings = BorrowRecord.objects.count()
+        active_borrowings = BorrowRecord.objects.filter(status__in=['borrowed', 'overdue']).count()
+        returned_borrowings = BorrowRecord.objects.filter(status='returned').count()
+        overdue_borrowings = BorrowRecord.objects.filter(status='overdue').count()
         
         return {
             'total_borrowings': total_borrowings,
@@ -84,7 +84,7 @@ class LibraryAnalytics:
             month_start = today.replace(day=1) - timedelta(days=30*i)
             month_end = (month_start + timedelta(days=32)).replace(day=1)
             
-            count = Borrow.objects.filter(
+            count = BorrowRecord.objects.filter(
                 borrow_date__date__gte=month_start,
                 borrow_date__date__lt=month_end
             ).count()

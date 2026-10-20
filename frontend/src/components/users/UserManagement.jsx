@@ -9,6 +9,8 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvUploading, setCsvUploading] = useState(false);
 
   useEffect(() => {
     // ✅ Check if user has admin or librarian role
@@ -115,6 +117,64 @@ const UserManagement = () => {
   };
 
   // ✅ Check if user has permission
+    const handleCSVUpload = async (event) => {
+      if (!csvFile || !csvFile.name.toLowerCase().endsWith('.csv')) {
+  alert('Please select a CSV file (.csv) only.');
+  return;
+}
+
+if (
+  csvFile.type &&
+  csvFile.type !== 'text/csv' &&
+  csvFile.type !== 'application/vnd.ms-excel' &&
+  csvFile.type !== 'application/csv' &&
+  csvFile.type !== 'application/octet-stream'
+) {
+  alert('Invalid file type. Please select a CSV file only.');
+  return;
+}
+    event.preventDefault();
+
+    if (!csvFile) {
+      toast.error('Please select a CSV file first.');
+      return;
+    }
+
+    setCsvUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await userService.uploadAuthorizedUsersCSV(csvFile);
+      const result = response.data;
+
+      const message =
+        `CSV import finished: ${result.imported} imported, ` +
+        `${result.rejected} rejected.`;
+
+      setSuccess(message);
+      toast.success(message);
+
+      if (result.errors?.length) {
+        console.warn('CSV row errors:', result.errors);
+        toast.warning('Some rows were rejected. Check the import results below.');
+      }
+
+      setCsvFile(null);
+      event.target.reset();
+    } catch (error) {
+      const data = error.response?.data;
+      const message =
+        data?.error ||
+        data?.detail ||
+        'CSV upload failed. Please check your file and admin permissions.';
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setCsvUploading(false);
+    }
+  };
   if (!user) {
     return (
       <div className="text-center py-5">
@@ -151,6 +211,38 @@ const UserManagement = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>👥 User Management</h2>
+        {user?.role === 'admin' && (
+  <form onSubmit={handleCSVUpload} className="mt-3 mb-3">
+    <label htmlFor="authorized-users-csv" className="form-label">
+      Import approved users from CSV
+    </label>
+
+    <div className="d-flex flex-wrap gap-2 align-items-center">
+      <input
+        id="authorized-users-csv"
+        type="file"
+        accept=".csv,text/csv"
+        className="form-control"
+        style={{ maxWidth: '380px' }}
+        onChange={(event) => setCsvFile(event.target.files?.[0] || null)}
+        disabled={csvUploading}
+      />
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={!csvFile || csvUploading}
+      >
+        {csvUploading ? 'Uploading...' : 'Add CSV File'}
+      </button>
+    </div>
+
+    <small className="text-muted d-block mt-2">
+      CSV columns required: student_id, first_name, last_name, email.
+      Optional columns: phone, department, role.
+    </small>
+  </form>
+)}
         <div>
           <span className="text-muted me-3">Total: {users.length} users</span>
           <button 

@@ -3,8 +3,8 @@ import apiClient from './apiClient';
 const borrowingService = {
   // 👤 User endpoints
   getMyBorrowings: () => {
-    return apiClient.get('/borrowing/borrow/history/');
-  },
+  return apiClient.get('/borrowing/borrows/');
+},
 
     // ✅ Check if user can borrow
   canBorrow: () => {

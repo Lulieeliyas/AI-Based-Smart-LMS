@@ -1,65 +1,66 @@
+
 from rest_framework import serializers
-from .models import Book, Category, BookReview
+from .models import Book, Category, Rating
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'created_at']
+        fields = ["id", "name"]
 
-class BookReviewSerializer(serializers.ModelSerializer):
+
+class RatingSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
-    
+
     class Meta:
-        model = BookReview
-        fields = ['id', 'user', 'rating', 'comment', 'created_at']
-        read_only_fields = ['user', 'created_at']
+        model = Rating
+        fields = ["id", "user", "book", "score", "review", "created_at"]
+        read_only_fields = ["user", "created_at"]
+
 
 class BookListSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_name = serializers.CharField(
+        source="category.name", read_only=True, allow_null=True
+    )
     average_rating = serializers.SerializerMethodField()
     reviews_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Book
-        fields = ['id', 'title', 'author', 'category', 'category_name', 'status', 
-                  'available_quantity', 'average_rating', 'reviews_count', 'cover_image']
-    
-    def get_average_rating(self, obj):
-        reviews = obj.reviews.all()
-        if reviews.exists():
-            return sum(r.rating for r in reviews) / reviews.count()
-        return None
-    
-    def get_reviews_count(self, obj):
-        return obj.reviews.count()
 
-class BookSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    added_by_name = serializers.CharField(source='added_by.username', read_only=True)
-    average_rating = serializers.SerializerMethodField()
-    reviews_count = serializers.SerializerMethodField()
-    
     class Meta:
         model = Book
-        fields = ['id', 'title', 'author', 'isbn', 'category', 'category_name',
-                  'publisher', 'publication_year', 'edition', 'pages', 'description',
-                  'cover_image', 'status', 'quantity', 'available_quantity', 'location',
-                  'added_by', 'added_by_name', 'created_at', 'updated_at',
-                  'average_rating', 'reviews_count']
-        read_only_fields = ['added_by', 'created_at', 'updated_at']
-    
+        fields = [
+            "id", "title", "author", "category", "category_name",
+            "isbn", "publisher", "published_year", "description",
+            "cover", "total_copies", "available_copies", "access_type",
+            "average_rating", "reviews_count",
+        ]
+
     def get_average_rating(self, obj):
-        reviews = obj.reviews.all()
-        if reviews.exists():
-            return sum(r.rating for r in reviews) / reviews.count()
+        ratings = obj.ratings.all()
+        if ratings.exists():
+            return sum(r.score for r in ratings) / ratings.count()
         return None
-    
+
     def get_reviews_count(self, obj):
-        return obj.reviews.count()
-    
+        return obj.ratings.count()
+
+
+class BookSerializer(BookListSerializer):
+    class Meta(BookListSerializer.Meta):
+        fields = BookListSerializer.Meta.fields + ["created_at"]
+        read_only_fields = ["created_at"]
+
     def validate(self, data):
-        if data.get('available_quantity', 0) > data.get('quantity', 0):
+        total = data.get(
+            "total_copies",
+            getattr(self.instance, "total_copies", 1),
+        )
+        available = data.get(
+            "available_copies",
+            getattr(self.instance, "available_copies", 1),
+        )
+
+        if available > total:
             raise serializers.ValidationError(
-                "Available quantity cannot exceed total quantity"
+                "Available copies cannot exceed total copies."
             )
         return data

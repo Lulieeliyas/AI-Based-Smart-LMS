@@ -1,5 +1,5 @@
 from .models import Notification
-from apps.borrowing.models import Borrow
+from apps.borrowing.models import BorrowRecord
 from django.utils import timezone
 from datetime import timedelta
 
@@ -22,7 +22,7 @@ class NotificationService:
         from datetime import date, timedelta
         
         due_date = date.today() + timedelta(days=3)
-        upcoming_due_borrowings = Borrow.objects.filter(
+        upcoming_due_borrowings = BorrowRecord.objects.filter(
             due_date=due_date,
             status='borrowed'
         ).select_related('user', 'book')
@@ -44,7 +44,7 @@ class NotificationService:
     @staticmethod
     def send_overdue_alert():
         """Send alerts for overdue books."""
-        overdue_borrowings = Borrow.objects.filter(
+        overdue_borrowings = BorrowRecord.objects.filter(
             status='overdue'
         ).select_related('user', 'book')
         

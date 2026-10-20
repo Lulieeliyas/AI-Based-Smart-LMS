@@ -110,14 +110,14 @@ class ReportStatisticsView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, IsLibrarianUser]
     
     def get(self, request):
-        from apps.books.models import Book, Category, BookReview
-        from apps.borrowing.models import Borrow
+        from apps.books.models import Book, Category, Rating
+        from apps.borrowing.models import BorrowRecord
         from apps.users.models import User
         
         # Basic statistics
-        total_borrowings = Borrow.objects.count()
-        active_borrowings = Borrow.objects.filter(status__in=['borrowed', 'renewed']).count()
-        overdue_borrowings = Borrow.objects.filter(status='overdue').count()
+        total_borrowings = BorrowRecord.objects.count()
+        active_borrowings = BorrowRecord.objects.filter(status__in=['borrowed', 'renewed']).count()
+        overdue_borrowings = BorrowRecord.objects.filter(status='overdue').count()
         
         # Books by category
         books_by_category = {}
@@ -131,7 +131,7 @@ class ReportStatisticsView(generics.GenericAPIView):
         for i in range(12):
             month = now - timedelta(days=30*i)
             month_key = month.strftime('%b %Y')
-            count = Borrow.objects.filter(
+            count = BorrowRecord.objects.filter(
                 borrow_date__year=month.year,
                 borrow_date__month=month.month
             ).count()
@@ -159,7 +159,7 @@ class ReportStatisticsView(generics.GenericAPIView):
                 users_by_role[role] = count
         
         # Fine collected
-        fine_collected = Borrow.objects.filter(
+        fine_collected = BorrowRecord.objects.filter(
             fine_paid=True
         ).aggregate(total=Sum('fine_amount'))['total'] or 0
         

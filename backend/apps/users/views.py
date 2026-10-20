@@ -12,16 +12,98 @@ from datetime import timedelta
 from django.db.models import Count, Sum
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import User, EmailVerification, PasswordResetToken, UserActivityLog
+from .models import (
+    User,
+    EmailVerification,
+    PasswordResetToken,
+    UserActivityLog,
+    AuthorizedUser,
+)
 from .serializers import (
     UserSerializer, UserListSerializer, RegisterSerializer, LoginSerializer,
     ChangePasswordSerializer, PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
     EmailVerificationSerializer, UserActivityLogSerializer, UserStatisticsSerializer
 )
+import csv
+import io
+
 import logging
 
 logger = logging.getLogger(__name__)
 
+class AuthorizedUserLookupView(generics.GenericAPIView):
+    """
+    Check whether an ID is approved for library registration.
+    Return masked contact information to avoid exposing private details.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        student_id = str(request.data.get("student_id", "")).strip()
+
+        if not student_id:
+            return Response(
+                {"error": "Student or staff ID is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            approved_user = AuthorizedUser.objects.get(
+                student_id__iexact=student_id,
+                is_authorized=True,
+            )
+        except AuthorizedUser.DoesNotExist:
+            return Response(
+                {
+                    "error": (
+                        "This ID is not approved for registration. "
+                        "Please contact the library administrator."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Prevent registration against an identity already in use.
+        if User.objects.filter(
+            Q(student_id__iexact=approved_user.student_id)
+            | Q(email__iexact=approved_user.email)
+        ).exists():
+            return Response(
+                {
+                    "error": (
+                        "An account already exists for this approved record. "
+                        "Please contact the library administrator if you need help."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        email = approved_user.email
+        phone = approved_user.phone or ""
+
+        # Mask email: h***@example.com
+        if "@" in email:
+            local_part, domain = email.split("@", 1)
+            masked_email = f"{local_part[0]}***@{domain}"
+        else:
+            masked_email = "***"
+
+        # Mask phone, preserving only the last 3 digits.
+        digits = "".join(char for char in phone if char.isdigit())
+        masked_phone = f"***{digits[-3:]}" if digits else "Not provided"
+
+        return Response(
+            {
+                "student_id": approved_user.student_id,
+                "first_name": approved_user.first_name,
+                "last_name": approved_user.last_name,
+                "department": approved_user.department,
+                "role": approved_user.role,
+                "masked_email": masked_email,
+                "masked_phone": masked_phone,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
@@ -68,6 +150,191 @@ class RegisterView(generics.CreateAPIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AuthorizedUserCSVUploadView(generics.GenericAPIView):
+    """Import approved people from an administrator-uploaded CSV file."""
+
+    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, FormParser]
+
+    REQUIRED_COLUMNS = {
+        "student_id",
+        "first_name",
+        "last_name",
+        "email",
+    }
+
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get("file")
+
+        if not uploaded_file:
+            return Response(
+                {"error": "Please upload a CSV file using the 'file' field."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not uploaded_file.name.lower().endswith(".csv"):
+            return Response(
+                {"error": "Only CSV files are accepted."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Prevent unexpectedly large uploads.
+        if uploaded_file.size > 5 * 1024 * 1024:
+            return Response(
+                {"error": "The CSV file must be 5 MB or smaller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            text_file = io.TextIOWrapper(
+                uploaded_file.file,
+                encoding="utf-8-sig",
+                newline="",
+            )
+            reader = csv.DictReader(text_file)
+
+            if not reader.fieldnames:
+                return Response(
+                    {"error": "The CSV file is empty or has no header row."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Normalize header names, including accidental spaces.
+            reader.fieldnames = [
+                (name or "").strip().lower()
+                for name in reader.fieldnames
+            ]
+
+            if len(reader.fieldnames) != len(set(reader.fieldnames)):
+                return Response(
+                    {"error": "The CSV contains duplicate column names."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            missing = self.REQUIRED_COLUMNS - set(reader.fieldnames)
+            if missing:
+                return Response(
+                    {
+                        "error": "Required CSV columns are missing.",
+                        "missing_columns": sorted(missing),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            allowed_roles = {
+                role for role, label in AuthorizedUser.ALLOWED_ROLES
+            }
+            imported = 0
+            errors = []
+            seen_ids = set()
+            seen_emails = set()
+
+            for row_number, row in enumerate(reader, start=2):
+                # Ignore completely blank rows.
+                if not any((value or "").strip() for value in row.values()):
+                    continue
+
+                student_id = (row.get("student_id") or "").strip()
+                first_name = (row.get("first_name") or "").strip()
+                last_name = (row.get("last_name") or "").strip()
+                email = (row.get("email") or "").strip().lower()
+                phone = (row.get("phone") or "").strip()
+                department = (row.get("department") or "").strip()
+                role = (row.get("role") or "student").strip().lower()
+
+                if not all([student_id, first_name, last_name, email]):
+                    errors.append({
+                        "row": row_number,
+                        "error": "ID, first name, last name, and email are required.",
+                    })
+                    continue
+
+                if role not in allowed_roles:
+                    errors.append({
+                        "row": row_number,
+                        "error": (
+                            f"Invalid role '{role}'. Allowed roles: "
+                            f"{', '.join(sorted(allowed_roles))}."
+                        ),
+                    })
+                    continue
+
+                if (
+                    student_id in seen_ids
+                    or email in seen_emails
+                    or AuthorizedUser.objects.filter(student_id=student_id).exists()
+                    or AuthorizedUser.objects.filter(email__iexact=email).exists()
+                ):
+                    errors.append({
+                        "row": row_number,
+                        "error": "Duplicate ID or email; this row was not imported.",
+                    })
+                    continue
+
+                if User.objects.filter(
+                    student_id=student_id
+                ).exists() or User.objects.filter(email__iexact=email).exists():
+                    errors.append({
+                        "row": row_number,
+                        "error": "This ID or email already belongs to an account.",
+                    })
+                    continue
+
+                try:
+                    from django.core.validators import validate_email
+                    validate_email(email)
+
+                    AuthorizedUser.objects.create(
+                        student_id=student_id,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        phone=phone,
+                        department=department,
+                        role=role,
+                        is_authorized=True,
+                    )
+
+                    seen_ids.add(student_id)
+                    seen_emails.add(email)
+                    imported += 1
+
+                except Exception as exc:
+                    logger.warning(
+                        "CSV import row %s failed: %s",
+                        row_number,
+                        str(exc),
+                    )
+                    errors.append({
+                        "row": row_number,
+                        "error": "Invalid data or database constraint violation.",
+                    })
+
+        except (UnicodeDecodeError, csv.Error):
+            return Response(
+                {"error": "Could not read the CSV. Please use a valid UTF-8 CSV file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        finally:
+            # Detach the wrapper so it does not unexpectedly close Django's
+            # uploaded-file handle.
+            if "text_file" in locals():
+                try:
+                    text_file.detach()
+                except Exception:
+                    pass
+
+        return Response(
+            {
+                "message": "CSV import finished.",
+                "imported": imported,
+                "rejected": len(errors),
+                "errors": errors,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class LoginView(generics.GenericAPIView):
@@ -451,11 +718,22 @@ class ResendVerificationView(generics.GenericAPIView):
 
         try:
             from .utils import create_email_verification
-            create_email_verification(user)
+            verification = create_email_verification(user)
+            if not verification:
+                return Response(
+            {
+                'error': (
+                    'Could not deliver the OTP. '
+                    'Please check your contact details and try again.'
+                )
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
             return Response({
-                'message': 'New OTP sent to your email and phone.',
-            })
+        'message': 'OTP sent successfully.',
+    })
         except Exception as e:
+
             logger.error(f"Resend OTP failed: {str(e)}")
             return Response(
                 {'error': 'Failed to send OTP. Please try again.'},
@@ -551,58 +829,83 @@ class GuestUpgradeView(views.APIView):
         
 
 
+
 class PublicStatsView(views.APIView):
     """
     Public statistics visible to everyone (no login required).
-    Shows: total books, available books, categories, active users, etc.
+    Shows total books, available books, categories, and borrowing statistics.
     """
     permission_classes = [AllowAny]
 
     def get(self, request):
         from apps.books.models import Book, Category
-        from apps.borrowing.models import Borrow
+        from apps.borrowing.models import BorrowRecord
 
+        # Total number of book titles
         total_books = Book.objects.count()
-        available_books = Book.objects.filter(available_quantity__gt=0).count()
-        total_copies = Book.objects.aggregate(Sum('quantity'))['quantity__sum'] or 0
-        total_categories = Category.objects.count()
-        total_borrowings = Borrow.objects.count()
-        active_borrowings = Borrow.objects.filter(
-            status__in=['borrowed', 'renewed']
+
+        # Number of titles with at least one available copy
+        available_books = Book.objects.filter(
+            available_copies__gt=0
         ).count()
 
-        # Active users: users who borrowed in the last 30 days
+        # Total physical copies across all book titles
+        total_copies = Book.objects.aggregate(
+            total=Sum("total_copies")
+        )["total"] or 0
+
+        # Total categories
+        total_categories = Category.objects.count()
+
+        # Total borrowing records
+        total_borrowings = BorrowRecord.objects.count()
+
+        # Active borrowings: issued or overdue records
+        active_borrowings = BorrowRecord.objects.filter(
+            status__in=[
+                BorrowRecord.Status.ISSUED,
+                BorrowRecord.Status.OVERDUE,
+            ]
+        ).count()
+
+        # Users who borrowed a book in the last 30 days
         thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
+
         active_users = User.objects.filter(
-            borrowings__borrow_date__gte=thirty_days_ago
+            borrows__issue_date__gte=thirty_days_ago.date()
         ).distinct().count()
 
+        # Total active, email-verified users
         total_users = User.objects.filter(
-            is_active=True, is_email_verified=True
+            is_active=True,
+            is_email_verified=True,
         ).count()
 
-        # Books by category (public view)
-        categories_data = []
+        # Top 10 categories by number of books
         categories = Category.objects.annotate(
-            book_count=Count('books')
-        ).order_by('-book_count')[:10]
-        for cat in categories:
-            categories_data.append({
-                'name': cat.name,
-                'count': cat.book_count,
-            })
+            book_count=Count("books")
+        ).order_by("-book_count")[:10]
+
+        categories_data = [
+            {
+                "name": category.name,
+                "count": category.book_count,
+            }
+            for category in categories
+        ]
 
         return Response({
-            'total_books': total_books,
-            'available_books': available_books,
-            'total_copies': total_copies,
-            'total_categories': total_categories,
-            'total_borrowings': total_borrowings,
-            'active_borrowings': active_borrowings,
-            'active_users': active_users,
-            'total_verified_users': total_users,
-            'categories': categories_data,
+            "total_books": total_books,
+            "available_books": available_books,
+            "total_copies": total_copies,
+            "total_categories": total_categories,
+            "total_borrowings": total_borrowings,
+            "active_borrowings": active_borrowings,
+            "active_users": active_users,
+            "total_verified_users": total_users,
+            "categories": categories_data,
         })
+
 
 
 class PublicBooksView(generics.ListAPIView):
@@ -688,7 +991,7 @@ class PublicDocumentationView(views.APIView):
                 {
                     'icon': '📖',
                     'title': 'Easy Borrowing',
-                    'description': 'Borrow and return books with a few clicks.',
+                    'description': 'BorrowRecord and return books with a few clicks.',
                 },
                 {
                     'icon': '💻',
@@ -773,7 +1076,7 @@ class PublicPopularBooksView(generics.ListAPIView):
         from apps.books.models import Book
         limit = int(self.request.query_params.get('limit', 10))
         return Book.objects.annotate(
-            borrow_count=Count('borrowings')
+            borrow_count=Count('borrows')
         ).filter(borrow_count__gt=0).order_by('-borrow_count')[:limit]
         
 

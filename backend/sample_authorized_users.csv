@@ -1,0 +1,4 @@
+student_id,first_name,last_name,email,phone,department,role
+STU2026001,Abebe,Kebede,abebe.test@example.com,0911000001,Computer Science,student
+STF2026001,Meron,Tadesse,meron.test@example.com,0911000002,Computer Science,academic_staff
+LIB2026001,Selam,Worku,selam.test@example.com,0911000003,Library,librarian

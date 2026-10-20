@@ -18,8 +18,8 @@ class BookListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'author', 'isbn', 'publisher', 'description']
-    filterset_fields = ['category', 'status', 'author']
-    ordering_fields = ['title', 'author', 'publication_year', 'created_at']
+    filterset_fields = ['category', 'author', 'access_type']
+    ordering_fields = ['title', 'author', 'published_year', 'created_at']
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -30,10 +30,7 @@ class BookListCreateView(generics.ListCreateAPIView):
         return BookSerializer if self.request.method == 'POST' else BookListSerializer
 
 
-    def perform_create(self, serializer):
-        serializer.save(added_by=self.request.user)
-
-
+   
 class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     View to retrieve, update, or delete a book.

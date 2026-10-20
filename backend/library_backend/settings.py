@@ -309,3 +309,5 @@ SKIP_EMAIL_VERIFICATION = False
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', 'your-chapa-secret-key')
 CHAPA_PUBLIC_KEY = os.getenv('CHAPA_PUBLIC_KEY', 'your-chapa-public-key')
 CHAPA_WEBHOOK_SECRET = os.getenv('CHAPA_WEBHOOK_SECRET', 'your-webhook-secret')
+# Email verification OTP expiry
+OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "10"))

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from .models import Report
 from .analytics import LibraryAnalytics
 from apps.books.models import Book
-from apps.borrowing.models import Borrow
+from apps.borrowing.models import BorrowRecord
 from apps.users.models import User
 from apps.digital_resources.models import DigitalResource
 
@@ -16,9 +16,9 @@ class ReportGenerator:
         # Get real statistics
         total_books = Book.objects.count()
         available_books = Book.objects.filter(available_quantity__gt=0).count()
-        borrowed_books = Borrow.objects.filter(status__in=['borrowed', 'overdue']).count()
-        overdue_books = Borrow.objects.filter(status='overdue').count()
-        total_borrowings = Borrow.objects.count()
+        borrowed_books = BorrowRecord.objects.filter(status__in=['borrowed', 'overdue']).count()
+        overdue_books = BorrowRecord.objects.filter(status='overdue').count()
+        total_borrowings = BorrowRecord.objects.count()
         
         # Get monthly borrowings for the last 6 months
         monthly_data = []
@@ -26,7 +26,7 @@ class ReportGenerator:
         for i in range(5, -1, -1):
             month_start = (today.replace(day=1) - timedelta(days=30*i))
             month_end = (month_start + timedelta(days=32)).replace(day=1)
-            count = Borrow.objects.filter(
+            count = BorrowRecord.objects.filter(
                 borrow_date__date__gte=month_start,
                 borrow_date__date__lt=month_end
             ).count()
@@ -99,7 +99,7 @@ class ReportGenerator:
     @staticmethod
     def generate_overdue_report(user):
         """Generate overdue books report with real data."""
-        overdue_borrowings = Borrow.objects.filter(
+        overdue_borrowings = BorrowRecord.objects.filter(
             status='overdue'
         ).select_related('user', 'book')
         
@@ -170,7 +170,7 @@ class ReportGenerator:
         """Generate inventory report."""
         total_books = Book.objects.count()
         available_books = Book.objects.filter(available_quantity__gt=0).count()
-        borrowed_books = Borrow.objects.filter(status__in=['borrowed', 'overdue']).count()
+        borrowed_books = BorrowRecord.objects.filter(status__in=['borrowed', 'overdue']).count()
         
         # Books by category
         category_data = Book.objects.values(

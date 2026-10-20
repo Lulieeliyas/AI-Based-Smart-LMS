@@ -1,11 +1,15 @@
 from django.urls import path,include
 from .views import (
-    RegisterView, LoginView, ProfileView,
+    RegisterView,
+    AuthorizedUserLookupView,
+    LoginView,
+    ProfileView,
     ChangePasswordView, UserListView, UserDetailView,
     PasswordResetRequestView, PasswordResetConfirmView,
     EmailVerificationView, ResendVerificationView,
     UserActivityView, UserStatisticsView, LogoutView,
     GuestUpgradeView, VerifyOTPView,
+    AuthorizedUserCSVUploadView,
 )
 from . import views
 urlpatterns = [
@@ -38,4 +42,16 @@ urlpatterns = [
     path('users/<uuid:pk>/', UserDetailView.as_view(), name='user-detail'),
     path('users/<uuid:user_id>/activities/', UserActivityView.as_view(), name='user-activities'),
     path('users/statistics/', UserStatisticsView.as_view(), name='user-statistics'),
+
+    path(
+    'admin/authorized-users/upload-csv/',
+    AuthorizedUserCSVUploadView.as_view(),
+    name='authorized-users-upload-csv',
+    ),
+
+    path(
+    'auth/authorized-user-lookup/',
+    AuthorizedUserLookupView.as_view(),
+    name='authorized-user-lookup',
+),
 ]

@@ -108,7 +108,7 @@ const NotificationBell = () => {
         notificationService.getNotifications()
       ]);
       
-      const count = countResponse?.data?.count || 0;
+      const count = countResponse?.data?.unread_count ?? 0;
       let notifications = notifResponse?.data || [];
       
       // Ensure notifications is an array
@@ -189,18 +189,24 @@ const NotificationBell = () => {
     }
   };
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'borrowing': return '📖';
-      case 'return': return '📤';
-      case 'overdue': return '⚠️';
-      case 'reminder': return '⏰';
-      case 'recommendation': return '🤖';
-      case 'reservation': return '📌';
-      case 'system': return '📢';
-      default: return '📨';
-    }
-  };
+  
+const getTypeIcon = (type) => {
+  switch (type) {
+    case 'borrow_due':
+      return '⏰';
+    case 'overdue':
+      return '⚠️';
+    case 'return_confirmation':
+      return '📤';
+    case 'new_resource':
+      return '📚';
+    case 'system':
+      return '📢';
+    default:
+      return '📨';
+  }
+};
+
 
   const notificationList = Array.isArray(recentNotifications) ? recentNotifications : [];
 

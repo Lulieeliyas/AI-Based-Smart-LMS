@@ -1,8 +1,8 @@
 from django.utils import timezone
 from django.db.models import Count, Sum, Avg, Q
 from datetime import timedelta, datetime
-from apps.books.models import Book, Category, BookReview
-from apps.borrowing.models import Borrow
+from apps.books.models import Book, Category, Rating
+from apps.borrowing.models import BorrowRecord
 from apps.users.models import User
 from apps.reports.models import Report
 import json
@@ -75,7 +75,7 @@ class ReportService:
     @staticmethod
     def _generate_borrowing_report(start_date, end_date, parameters=None):
         """Generate borrowing report"""
-        borrowings = Borrow.objects.filter(
+        borrowings = BorrowRecord.objects.filter(
             borrow_date__date__gte=start_date,
             borrow_date__date__lte=end_date
         )
@@ -104,13 +104,13 @@ class ReportService:
         }
         
         # Group by status
-        for status, _ in Borrow.STATUS_CHOICES:
+        for status, _ in BorrowRecord.STATUS_CHOICES:
             count = borrowings.filter(status=status).count()
             if count > 0:
                 data['borrowings_by_status'][status] = count
         
         # Group by role
-        for role, _ in Borrow.ROLE_CHOICES:
+        for role, _ in BorrowRecord.ROLE_CHOICES:
             count = borrowings.filter(borrower_role=role).count()
             if count > 0:
                 data['borrowings_by_role'][role] = count
@@ -179,7 +179,7 @@ class ReportService:
             'books_by_status': {},
             'most_borrowed_books': [],
             'books_with_reviews': books.filter(reviews__isnull=False).distinct().count(),
-            'average_rating': float(BookReview.objects.aggregate(Avg('rating'))['rating__avg'] or 0),
+            'average_rating': float(Rating.objects.aggregate(Avg('rating'))['rating__avg'] or 0),
             'top_rated_books': [],
             'recent_books': [
                 {
@@ -237,7 +237,7 @@ class ReportService:
     @staticmethod
     def _generate_overdue_report(start_date, end_date, parameters=None):
         """Generate overdue report"""
-        overdue = Borrow.objects.filter(status='overdue')
+        overdue = BorrowRecord.objects.filter(status='overdue')
         
         data = {
             'total_overdue': overdue.count(),
@@ -275,7 +275,7 @@ class ReportService:
     @staticmethod
     def _generate_fine_report(start_date, end_date, parameters=None):
         """Generate fine report"""
-        fines = Borrow.objects.filter(fine_amount__gt=0)
+        fines = BorrowRecord.objects.filter(fine_amount__gt=0)
         
         data = {
             'total_fines': fines.count(),
@@ -426,7 +426,7 @@ class ReportService:
     @staticmethod
     def _generate_damage_report(start_date, end_date, parameters=None):
         """Generate damage report"""
-        damaged = Borrow.objects.filter(
+        damaged = BorrowRecord.objects.filter(
             damage_status__in=['minor', 'moderate', 'severe', 'lost']
         )
         
@@ -454,7 +454,7 @@ class ReportService:
             'lost': 50
         }
         
-        for status, label in Borrow.DAMAGE_STATUS_CHOICES:
+        for status, label in BorrowRecord.DAMAGE_STATUS_CHOICES:
             count = damaged.filter(damage_status=status).count()
             if count > 0:
                 data['damage_by_status'][status] = count
@@ -516,19 +516,19 @@ class ReportService:
         
         data = {
             'report_date': today.strftime('%Y-%m-%d'),
-            'new_borrowings': Borrow.objects.filter(borrow_date__date=today).count(),
-            'new_returns': Borrow.objects.filter(return_date=today).count(),
+            'new_borrowings': BorrowRecord.objects.filter(borrow_date__date=today).count(),
+            'new_returns': BorrowRecord.objects.filter(return_date=today).count(),
             'new_users': User.objects.filter(created_at__date=today).count(),
             'new_books': Book.objects.filter(created_at__date=today).count(),
-            'overdue_count': Borrow.objects.filter(status='overdue').count(),
-            'active_borrowings': Borrow.objects.filter(status__in=['borrowed', 'renewed']).count(),
+            'overdue_count': BorrowRecord.objects.filter(status='overdue').count(),
+            'active_borrowings': BorrowRecord.objects.filter(status__in=['borrowed', 'renewed']).count(),
             'visitors': 0,
             'daily_borrowings': [],
             'overdue_items': []
         }
         
         # Daily borrowings
-        daily_borrowings = Borrow.objects.filter(borrow_date__date=today)[:20]
+        daily_borrowings = BorrowRecord.objects.filter(borrow_date__date=today)[:20]
         data['daily_borrowings'] = [
             {
                 'user': b.user.username,
@@ -540,7 +540,7 @@ class ReportService:
         ]
         
         # Overdue items
-        overdue = Borrow.objects.filter(status='overdue')[:20]
+        overdue = BorrowRecord.objects.filter(status='overdue')[:20]
         data['overdue_items'] = [
             {
                 'user': b.user.username,
@@ -564,11 +564,11 @@ class ReportService:
             'report_month': today.strftime('%B %Y'),
             'month_start': month_start.strftime('%Y-%m-%d'),
             'month_end': today.strftime('%Y-%m-%d'),
-            'total_borrowings': Borrow.objects.filter(borrow_date__date__gte=month_start).count(),
-            'total_returns': Borrow.objects.filter(return_date__gte=month_start).count(),
+            'total_borrowings': BorrowRecord.objects.filter(borrow_date__date__gte=month_start).count(),
+            'total_returns': BorrowRecord.objects.filter(return_date__gte=month_start).count(),
             'new_users': User.objects.filter(created_at__date__gte=month_start).count(),
             'new_books': Book.objects.filter(created_at__date__gte=month_start).count(),
-            'total_fines_collected': float(Borrow.objects.filter(
+            'total_fines_collected': float(BorrowRecord.objects.filter(
                 fine_paid=True,
                 return_date__gte=month_start
             ).aggregate(Sum('fine_amount'))['fine_amount__sum'] or 0),
@@ -593,7 +593,7 @@ class ReportService:
         # Monthly trend (last 12 months)
         for i in range(12):
             month = today.replace(day=1) - timedelta(days=30*i)
-            count = Borrow.objects.filter(
+            count = BorrowRecord.objects.filter(
                 borrow_date__year=month.year,
                 borrow_date__month=month.month
             ).count()
@@ -611,11 +611,11 @@ class ReportService:
         
         data = {
             'report_year': year,
-            'total_borrowings': Borrow.objects.filter(borrow_date__year=year).count(),
-            'total_returns': Borrow.objects.filter(return_date__year=year).count(),
+            'total_borrowings': BorrowRecord.objects.filter(borrow_date__year=year).count(),
+            'total_returns': BorrowRecord.objects.filter(return_date__year=year).count(),
             'new_users': User.objects.filter(created_at__year=year).count(),
             'new_books': Book.objects.filter(created_at__year=year).count(),
-            'total_fines': float(Borrow.objects.filter(
+            'total_fines': float(BorrowRecord.objects.filter(
                 created_at__year=year
             ).aggregate(Sum('fine_amount'))['fine_amount__sum'] or 0),
             'yearly_stats': [],
@@ -625,7 +625,7 @@ class ReportService:
         
         # Monthly breakdown
         for month in range(1, 13):
-            count = Borrow.objects.filter(
+            count = BorrowRecord.objects.filter(
                 borrow_date__year=year,
                 borrow_date__month=month
             ).count()

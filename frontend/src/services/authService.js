@@ -6,9 +6,12 @@ const authService = {
     return apiClient.post('/users/auth/login/', { username, password });
   },
   
-  register: (userData) => {
-    return apiClient.post('/users/auth/register/', userData);
-  },
+register: (userData) => apiClient.post('/users/auth/register/', userData),
+
+lookupAuthorizedUser: (studentId) =>
+  apiClient.post('/users/auth/authorized-user-lookup/', {
+    student_id: studentId,
+  }),
   
   logout: () => {
     localStorage.removeItem('access_token');

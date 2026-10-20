@@ -48,3 +48,6 @@ Thumbs.db
 scripts/venv/
 backend/deploy_key
 *.log
+
+# Database backups
+backups/
