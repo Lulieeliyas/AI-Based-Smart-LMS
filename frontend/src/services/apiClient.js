@@ -1,166 +1,198 @@
+
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-// Use import.meta.env for Vite instead of process.env
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// API base URL: Vercel production or local development
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:8000/api'
+).replace(/\/+$/, '');
 
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 30000,
-  // headers: {
-  //   'Content-Type': 'application/json',
-  // },
+  headers: {
+    Accept: 'application/json',
+  },
 });
 
-// Request interceptor
+// Separate client prevents refresh requests from triggering
+// the normal API response interceptor.
+const refreshClient = axios.create({
+  baseURL: API_URL,
+  timeout: 15000,
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  },
+});
+
+// Attach the access token to API requests.
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
+
     if (token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for token refresh
 let isRefreshing = false;
 let failedQueue = [];
-let refreshAttempts = 0;
-const MAX_REFRESH_ATTEMPTS = 1;
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+function processQueue(error, token = null) {
+  failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
-      prom.reject(error);
+      reject(error);
     } else {
-      prom.resolve(token);
+      resolve(token);
     }
   });
-  failedQueue = [];
-};
 
-const clearAuthAndRedirect = () => {
+  failedQueue = [];
+}
+
+function clearAuthAndRedirect() {
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user_data');
-  delete apiClient.defaults.headers.common['Authorization'];
-  
-  // Only redirect if not already on login page
+
+  delete apiClient.defaults.headers.common.Authorization;
+
   if (!window.location.pathname.includes('/login')) {
-    toast.error('Session expired. Please login again.');
-    setTimeout(() => {
-      window.location.href = '/login';
-    }, 500);
+    toast.error('Your session has expired. Please log in again.');
+    window.location.assign('/login');
   }
-};
+}
 
 apiClient.interceptors.response.use(
   (response) => response,
+
   async (error) => {
     const originalRequest = error.config;
-    
-    // Prevent infinite loop - if we've already retried, give up
-    if (originalRequest._retry && originalRequest._retryCount > 2) {
-      clearAuthAndRedirect();
+
+    if (!originalRequest) {
+      if (error.message === 'Network Error') {
+        toast.error(
+          'Cannot connect to the backend. Check the server and API URL.'
+        );
+      }
+
       return Promise.reject(error);
     }
-    
-    // Only handle 401 errors that haven't been retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Check if we're on a login page - don't try to refresh there
-      if (window.location.pathname.includes('/login')) {
+
+    const status = error.response?.status;
+    const requestUrl = originalRequest.url || '';
+
+    // Do not refresh tokens for login, registration, or refresh requests.
+    const isAuthEndpoint =
+      /\/(login|register|token\/refresh)\/?$/i.test(requestUrl);
+
+    if (status === 401 && !isAuthEndpoint) {
+      // Do not retry a request more than once.
+      if (originalRequest._retry) {
         return Promise.reject(error);
       }
-      
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        clearAuthAndRedirect();
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
-        // Queue the request to try again after refresh completes
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
-        }).catch(err => {
-          // If refresh failed, clear auth and redirect
-          clearAuthAndRedirect();
-          return Promise.reject(err);
-        });
+        })
+          .then((token) => {
+            originalRequest.headers =
+              originalRequest.headers || {};
+
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+
+            return apiClient(originalRequest);
+          })
+          .catch((queueError) => Promise.reject(queueError));
       }
 
       originalRequest._retry = true;
-      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        
-        if (!refreshToken) {
-          clearAuthAndRedirect();
-          throw new Error('No refresh token available');
+        // API_URL already has its trailing slash removed.
+        const response = await refreshClient.post(
+          '/users/token/refresh/',
+          { refresh: refreshToken }
+        );
+
+        const accessToken = response.data?.access;
+
+        if (!accessToken) {
+          throw new Error(
+            'Token refresh response did not contain an access token.'
+          );
         }
 
-        // Try to refresh the token
-        const response = await axios.post(
-          `${API_URL}/users/token/refresh/`,
-          { refresh: refreshToken },
-          { timeout: 10000 } // 10 second timeout
-        );
-        
-        const { access } = response.data;
-        
-        if (!access) {
-          throw new Error('No access token in refresh response');
-        }
-        
-        // Store new access token
-        localStorage.setItem('access_token', access);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${access}`;
-        
-        // Process any queued requests
-        processQueue(null, access);
-        
-        // Retry the original request with the new token
-        originalRequest.headers.Authorization = `Bearer ${access}`;
-        return apiClient(originalRequest);
-        
+        localStorage.setItem('access_token', accessToken);
+
+        apiClient.defaults.headers.common.Authorization =
+          `Bearer ${accessToken}`;
+
+        processQueue(null, accessToken);
+
+        originalRequest.headers =
+          originalRequest.headers || {};
+
+        originalRequest.headers.Authorization =
+          `Bearer ${accessToken}`;
+
+        return await apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - clear everything
         processQueue(refreshError, null);
         clearAuthAndRedirect();
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
-    
-    // Handle other errors without trying to refresh
-    if (error.response?.status === 400) {
-      const message = error.response.data?.detail || error.response.data?.message || 'Invalid request';
-      if (!error.config._silent) {
-        toast.error(message);
-      }
-    } else if (error.response?.status === 403) {
-      if (!error.config._silent) {
-        toast.error('You do not have permission to perform this action');
-      }
-    } else if (error.response?.status === 404) {
-      // Don't show 404 errors to user - just log them
-      console.warn('API endpoint not found:', error.config?.url);
-    } else if (error.response?.status === 500) {
-      if (!error.config._silent) {
-        toast.error('Server error. Please try again later.');
-      }
-    } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      if (!error.config._silent) {
-        toast.error('Request timeout. Please try again.');
-      }
+
+    // Do not show an authentication toast for failed login attempts.
+    if (status === 400) {
+      const message =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        'Invalid request. Please check your input.';
+
+      toast.error(message);
+    } else if (status === 403) {
+      toast.error('You do not have permission to do this.');
+    } else if (status === 404) {
+      console.error(
+        'API endpoint not found:',
+        error.config?.baseURL,
+        error.config?.url
+      );
+    } else if (status >= 500) {
+      toast.error('Backend server error. Please try again later.');
+    } else if (
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ETIMEDOUT' ||
+      error.message?.toLowerCase().includes('timeout')
+    ) {
+      toast.error('Request timed out. Please try again.');
     } else if (error.message === 'Network Error') {
-      if (!error.config._silent) {
-        toast.error('Network error. Please check your connection.');
-      }
+      toast.error(
+        'Network error. Check the backend, API URL, and CORS settings.'
+      );
     }
-    
+
     return Promise.reject(error);
   }
 );
