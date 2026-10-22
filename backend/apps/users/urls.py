@@ -10,6 +10,7 @@ from .views import (
     UserActivityView, UserStatisticsView, LogoutView,
     GuestUpgradeView, VerifyOTPView,
     AuthorizedUserCSVUploadView,
+    AuthorizedUserListCreateView,
 )
 from . import views
 urlpatterns = [
@@ -53,5 +54,11 @@ urlpatterns = [
     'auth/authorized-user-lookup/',
     AuthorizedUserLookupView.as_view(),
     name='authorized-user-lookup',
+),
+
+path(
+    "admin/authorized-users/",
+    AuthorizedUserListCreateView.as_view(),
+    name="authorized-users-list-create",
 ),
 ]

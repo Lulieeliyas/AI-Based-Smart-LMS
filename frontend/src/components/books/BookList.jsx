@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Recommendations from '../recommendations/Recommendations';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import bookService from '../../services/bookService';
@@ -327,6 +328,8 @@ const BookList = () => {
           </ul>
         </nav>
       )}
+      {/* AI Recommendations available to all users */}
+      <Recommendations embedded />
     </div>
   );
 };

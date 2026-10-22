@@ -176,10 +176,10 @@ const StudentDashboard = () => {
                   </Link>
                 </div>
                 <div className="col-md-3 col-6">
-                  <Link to="/recommendations" className="btn btn-success w-100 py-3">
+                  {/* <Link to="/recommendations" className="btn btn-success w-100 py-3">
                     <i className="bi bi-stars me-2"></i>
                     Recommendations
-                  </Link>
+                  </Link> */}
                 </div>
                 <div className="col-md-3 col-6">
                   <Link to="/digital" className="btn btn-warning w-100 py-3">
@@ -278,9 +278,9 @@ const StudentDashboard = () => {
           <div className="card shadow-sm">
             <div className="card-header bg-white d-flex justify-content-between align-items-center">
               <h5 className="mb-0">📚 Recommended for You</h5>
-              <Link to="/recommendations" className="btn btn-sm btn-outline-primary">
+              {/* <Link to="/recommendations" className="btn btn-sm btn-outline-primary">
                 View All
-              </Link>
+              </Link> */}
             </div>
             <div className="card-body">
               {recommendations.length > 0 ? (

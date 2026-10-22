@@ -113,12 +113,6 @@ const Dashboard = () => {
                   </Link>
                 </div>
                 <div className="col-md-6">
-                  <Link to="/recommendations" className="btn btn-success w-100 py-3">
-                    <div style={{ fontSize: '1.5rem' }}>🤖</div>
-                    Recommendations
-                  </Link>
-                </div>
-                <div className="col-md-6">
                   <Link to="/borrowings" className="btn btn-info text-white w-100 py-3">
                     <div style={{ fontSize: '1.5rem' }}>📖</div>
                     My Borrowings

@@ -67,18 +67,26 @@ changePassword: (oldPasswordOrData, newPassword) => {
   // ========== Admin User Management ==========
 
     uploadAuthorizedUsersCSV: (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
+  const formData = new FormData();
+  formData.append('file', file);
 
-    return apiClient.post(
-      '/users/admin/authorized-users/upload-csv/',
-      formData
-    );
-  },
+  return apiClient.post(
+    '/users/admin/authorized-users/upload-csv/',
+    formData
+  );
+},
+
+  getAuthorizedUsers: () => {
+  return apiClient.get('/users/admin/authorized-users/');
+},
+
+createAuthorizedUser: (data) => {
+  return apiClient.post('/users/admin/authorized-users/', data);
+},
   
-  getUsers: (params = {}) => {
-    return apiClient.get('/users/users/', { params });
-  },
+  getUsers: () => {
+  return apiClient.get('/users/users/');
+},
   
   getUser: (userId) => {
     return apiClient.get(`/users/users/${userId}/`);

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import recommendationService from '../../services/recommendationService';
 
-const Recommendations = () => {
+const Recommendations = ({ embedded = false }) => {
   const [recommendations, setRecommendations] = useState([]);
   const [popularBooks, setPopularBooks] = useState([]);
   const [trendingBooks, setTrendingBooks] = useState([]);
@@ -150,12 +150,16 @@ const Recommendations = () => {
   }
 
   return (
-    <div>
+  <div className={embedded ? 'mt-5 pt-4 border-top' : ''}>
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <div>
-          <h2>🤖 AI Recommendations</h2>
-          <p className="text-muted mb-0">Personalized book suggestions powered by AI</p>
+          <h2>{embedded ? '📚 Recommended Books' : '🤖 AI Recommendations'}</h2>
+          <p className="text-muted mb-0">
+            {embedded
+            ? 'Personalized, popular, and trending books'
+            : 'Personalized book suggestions powered by AI'}
+            </p>
         </div>
         <button
           className="btn btn-primary"

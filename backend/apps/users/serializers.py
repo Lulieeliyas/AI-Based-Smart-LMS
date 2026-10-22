@@ -27,8 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id', 'username', 'role', 'last_login', 'created_at', 'updated_at',
             'is_staff', 'is_superuser', 'is_email_verified', 'max_books_allowed',
-            'is_active'
-        ]
+            ]
         extra_kwargs = {
             'profile_picture': {'required': False, 'allow_null': True},
             'email': {'required': False},
@@ -53,6 +52,14 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.can_borrow()
         except Exception:
             return True
+
+    def validate_is_active(self, value):
+        request = self.context.get('request')
+        if not request or not request.user.is_staff:
+            raise serializers.ValidationError(
+            "Only staff administrators can change account activation."
+        )
+        return value
 
     def validate_email(self, value):
         """Ensure email uniqueness when updating."""

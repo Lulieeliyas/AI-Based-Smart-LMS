@@ -18,10 +18,10 @@ const QuickActions = ({ userRole }) => {
       roles: ['student', 'academic_staff']
     },
     {
-      label: 'Recommendations',
+      // label: 'Recommendations',
       icon: '🤖',
       color: 'success',
-      link: '/recommendations',
+      // link: '/recommendations',
       roles: ['student', 'academic_staff']
     },
     {

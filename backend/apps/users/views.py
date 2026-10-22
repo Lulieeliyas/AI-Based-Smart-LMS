@@ -1138,3 +1138,133 @@ class UserViewSet(viewsets.ModelViewSet):
             'new_users_this_month': User.objects.filter(created_at__gte=start_of_month).count(),
             'new_users_today': User.objects.filter(created_at__gte=start_of_today).count(),
         })
+
+class AuthorizedUserListCreateView(generics.GenericAPIView):
+    """
+    List and create authorized registration records.
+    Only administrators can manage these records.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        records = AuthorizedUser.objects.order_by("student_id").values(
+            "id",
+            "student_id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "department",
+            "role",
+            "is_authorized",
+            "imported_at",
+            "updated_at",
+        )
+
+        return Response(list(records), status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
+        from django.db import IntegrityError, transaction
+
+        data = request.data
+
+        student_id = str(data.get("student_id", "")).strip()
+        first_name = str(data.get("first_name", "")).strip()
+        last_name = str(data.get("last_name", "")).strip()
+        email = str(data.get("email", "")).strip().lower()
+        phone = str(data.get("phone", "")).strip()
+        department = str(data.get("department", "")).strip()
+        role = str(data.get("role", "student")).strip().lower()
+
+        if not all([student_id, first_name, last_name, email]):
+            return Response(
+                {
+                    "error": (
+                        "Student ID, first name, last name, "
+                        "and email are required."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        allowed_roles = {
+            value for value, label in AuthorizedUser.ALLOWED_ROLES
+        }
+
+        if role not in allowed_roles:
+            return Response(
+                {
+                    "error": "Invalid role.",
+                    "allowed_roles": sorted(allowed_roles),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response(
+                {"error": "Enter a valid email address."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if AuthorizedUser.objects.filter(
+            student_id__iexact=student_id
+        ).exists():
+            return Response(
+                {"error": "This student ID is already registered as authorized."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if AuthorizedUser.objects.filter(email__iexact=email).exists():
+            return Response(
+                {"error": "This email already exists in authorized users."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            User.objects.filter(student_id__iexact=student_id).exists()
+            or User.objects.filter(email__iexact=email).exists()
+        ):
+            return Response(
+                {"error": "This ID or email already belongs to an account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+                record = AuthorizedUser.objects.create(
+                    student_id=student_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    phone=phone,
+                    department=department,
+                    role=role,
+                    is_authorized=True,
+                )
+        except IntegrityError:
+            return Response(
+                {"error": "The ID or email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "message": "Authorized user added successfully.",
+                "user": {
+                    "id": record.id,
+                    "student_id": record.student_id,
+                    "first_name": record.first_name,
+                    "last_name": record.last_name,
+                    "email": record.email,
+                    "phone": record.phone,
+                    "department": record.department,
+                    "role": record.role,
+                    "is_authorized": record.is_authorized,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )

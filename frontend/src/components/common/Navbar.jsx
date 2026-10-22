@@ -60,29 +60,12 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/recommendations">
-                <i className="bi bi-stars me-1"></i>Recommendations
-              </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/digital">
                 <i className="bi bi-cloud-arrow-down me-1"></i>Digital
               </Link>
             </li>
-            {(user?.role === 'admin' || user?.role === 'librarian') && (
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/books/manage">
-                    <i className="bi bi-gear me-1"></i>Manage Books
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/reports">
-                    <i className="bi bi-bar-chart me-1"></i>Reports
-                  </Link>
-                </li>
-              </>
-            )}
             {user?.role === 'admin' && (
               <li className="nav-item">
                 <Link className="nav-link" to="/users">

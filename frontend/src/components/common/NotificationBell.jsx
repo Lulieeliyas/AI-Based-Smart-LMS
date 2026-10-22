@@ -33,7 +33,7 @@ const DEMO_NOTIFICATIONS = [
     priority: 'medium',
     is_read: false,
     time_ago: '3 ሰአት በፊት / 3 hours ago',
-    link: '/recommendations'
+    // link: '/recommendations'
   },
   {
     id: 4,

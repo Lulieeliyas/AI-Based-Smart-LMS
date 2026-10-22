@@ -112,23 +112,17 @@ def send_otp_sms(user, otp, purpose='verification'):
 
 
 def send_otp_both(user, otp, purpose='verification'):
-    """
-    Send the same OTP by email and SMS.
-
-    Returns True if at least one delivery channel reports success.
-    """
+    """Deliver OTP by email only."""
     email_sent = send_otp_email(user, otp, purpose)
-    sms_sent = send_otp_sms(user, otp, purpose)
 
     logger.info(
-        'OTP delivery results for %s (%s): email=%s, sms=%s',
+        'Email-only OTP delivery result for %s (%s): email=%s',
         getattr(user, 'email', 'unknown'),
         purpose,
         email_sent,
-        sms_sent,
     )
 
-    return email_sent or sms_sent
+    return email_sent
 
 
 def create_email_verification(user):
