@@ -101,7 +101,12 @@ class User(AbstractUser):
             self.get_active_borrowings_count()
             < self.max_books_allowed
         )
-
+    def save(self, *args, **kwargs):
+        if self.is_superuser:
+            self.role = 'admin'
+            self.is_email_verified = True
+            self.is_active = True
+        super().save(*args, **kwargs)
 
 class EmailVerification(models.Model):
     user = models.OneToOneField(
@@ -184,7 +189,6 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Password reset for {self.user.username}"
-
 
 class UserActivityLog(models.Model):
     ACTION_CHOICES = (
