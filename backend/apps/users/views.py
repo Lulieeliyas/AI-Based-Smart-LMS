@@ -433,18 +433,18 @@ class ChangePasswordView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        
+
         user = request.user
         user.set_password(serializer.validated_data['new_password'])
         user.save()
-        
+
         # Log activity
         UserActivityLog.objects.create(
             user=user,
             action='update',
             description='Password changed'
         )
-        
+
         return Response({'message': 'Password changed successfully'})
 
 
@@ -455,16 +455,16 @@ class UserListView(generics.ListAPIView):
     filterset_fields = ['role', 'is_active', 'is_email_verified', 'department']
     search_fields = ['username', 'email', 'first_name', 'last_name', 'phone']
     ordering_fields = ['username', 'email', 'created_at', 'last_login']
-    
+
     def get_permissions(self):
         # ✅ Allow admin and librarian to access user list
         if self.request.user.is_authenticated and self.request.user.role in ['admin', 'librarian']:
             return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated()]
-    
+
     def get_queryset(self):
         user = self.request.user
-        
+
         # ✅ Admin and librarian can see all users
         if user.role in ['admin', 'librarian']:
             queryset = User.objects.all()
@@ -472,24 +472,24 @@ class UserListView(generics.ListAPIView):
             if not user.is_superuser:
                 queryset = queryset.filter(is_superuser=False)
             return queryset
-        
+
         # ✅ Other roles can only see themselves
         return User.objects.filter(id=user.id)
-    
+
     def list(self, request, *args, **kwargs):
         try:
             queryset = self.filter_queryset(self.get_queryset())
-            
+
             # ✅ Check if user has permission to view all users
             if request.user.role not in ['admin', 'librarian']:
                 # Students can only see themselves
                 queryset = queryset.filter(id=request.user.id)
-            
+
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
                 return self.get_paginated_response(serializer.data)
-            
+
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
         except Exception as e:
@@ -504,30 +504,66 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def perform_update(self, serializer):
+        request = self.request
+
+        # Prevent an administrator from deactivating their own account.
+        if (
+            serializer.instance == request.user
+            and serializer.validated_data.get('is_active') is False
+        ):
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({
+                'is_active': 'You cannot deactivate your own account.'
+            })
+
         user = serializer.save()
-        UserActivityLog.objects.create(
-            user=self.request.user,
-            action='update',
-            description=f'Updated user {user.username}'
-        )
-    
-    def destroy(self, request, *args, **kwargs):
-        user = self.get_object()
-        if user == request.user:
-            return Response(
-                {'error': 'You cannot delete your own account'}, 
-                status=status.HTTP_400_BAD_REQUEST
+
+        description = (
+            f'Deactivated user account: {user.username}'
+            if (
+                'is_active' in serializer.validated_data
+                and not user.is_active
             )
-        user.delete()
+            else f'Updated user {user.username}'
+        )
+
         UserActivityLog.objects.create(
             user=request.user,
-            action='delete',
-            description=f'Deleted user {user.username}'
+            action='update',
+            description=description
         )
-        return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if user == request.user:
+            return Response(
+                {'error': 'You cannot deactivate your own account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.is_active:
+            return Response(
+                {'message': 'This user account is already deactivated.'},
+                status=status.HTTP_200_OK
+            )
+
+        username = user.username
+        user.is_active = False
+        user.save(update_fields=['is_active', 'updated_at'])
+
+        UserActivityLog.objects.create(
+            user=request.user,
+            action='update',
+            description=f'Deactivated user account: {username}'
+        )
+
+        return Response(
+            {'message': f'User account "{username}" deactivated successfully.'},
+            status=status.HTTP_200_OK
+        )
 
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = PasswordResetRequestSerializer
@@ -570,8 +606,8 @@ class PasswordResetRequestView(generics.GenericAPIView):
                 {'error': 'Failed to send OTP. Please try again later.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
-            
+
+
 
 class VerifyOTPView(generics.GenericAPIView):
     """Verify OTP before showing the new password step"""
@@ -619,7 +655,7 @@ class VerifyOTPView(generics.GenericAPIView):
             'valid': True,
             'message': 'OTP verified successfully'
         })
-        
+
 class PasswordResetConfirmView(generics.GenericAPIView):
     serializer_class = PasswordResetConfirmSerializer
     permission_classes = [AllowAny]
@@ -781,11 +817,11 @@ class ResendVerificationView(generics.GenericAPIView):
                 {'error': 'Failed to send OTP. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-            
+
 class UserActivityView(generics.ListAPIView):
     serializer_class = UserActivityLogSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get_queryset(self):
         user_id = self.kwargs.get('user_id')
         return UserActivityLog.objects.filter(user_id=user_id)
@@ -793,25 +829,25 @@ class UserActivityView(generics.ListAPIView):
 
 class UserStatisticsView(views.APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get(self, request):
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
         verified_users = User.objects.filter(is_email_verified=True).count()
-        
+
         roles_distribution = {}
         for role, _ in User.ROLE_CHOICES:
             count = User.objects.filter(role=role).count()
             if count > 0:
                 roles_distribution[role] = count
-        
+
         now = timezone.now()
         start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+
         new_users_this_month = User.objects.filter(created_at__gte=start_of_month).count()
         new_users_today = User.objects.filter(created_at__gte=start_of_day).count()
-        
+
         data = {
             'total_users': total_users,
             'active_users': active_users,
@@ -820,7 +856,7 @@ class UserStatisticsView(views.APIView):
             'new_users_this_month': new_users_this_month,
             'new_users_today': new_users_today
         }
-        
+
         serializer = UserStatisticsSerializer(data)
         return Response(serializer.data)
 
@@ -836,7 +872,7 @@ class LogoutView(views.APIView):
                 token.blacklist()
         except Exception as e:
             logger.error(f"Logout error: {str(e)}")
-        
+
         # Log activity
         UserActivityLog.objects.create(
             user=request.user,
@@ -844,24 +880,24 @@ class LogoutView(views.APIView):
             ip_address=request.META.get('REMOTE_ADDR'),
             user_agent=request.META.get('HTTP_USER_AGENT')
         )
-        
+
         return Response({'message': 'Logged out successfully'})
 
 
 class GuestUpgradeView(views.APIView):
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         user = request.user
         if user.role != 'guest':
             return Response(
-                {'error': 'Only guest users can upgrade'}, 
+                {'error': 'Only guest users can upgrade'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         user.role = request.data.get('role', 'student')
         user.save()
-        
+
         return Response({
             'message': f'Account upgraded to {user.get_role_display()}',
             'user': UserSerializer(user).data
@@ -1115,7 +1151,7 @@ class PublicPopularBooksView(generics.ListAPIView):
         return Book.objects.annotate(
             borrow_count=Count('borrows')
         ).filter(borrow_count__gt=0).order_by('-borrow_count')[:limit]
-        
+
 
 class UserViewSet(viewsets.ModelViewSet):
     """

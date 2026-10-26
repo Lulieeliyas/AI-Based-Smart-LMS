@@ -287,31 +287,31 @@ const handleSaveRegisteredUser = async (event) => {
     }
   };
 
-  // --------------------------------------------------
-  // Delete account
-  // --------------------------------------------------
+
+  // Deactivate account while preserving user history.
   const handleDeleteUser = async (userId, username) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete user "${username}"? ` +
-        'This action cannot be undone.'
+      `Are you sure you want to deactivate user "${username}"? ` +
+        'They will no longer be able to sign in. Their records will be preserved.'
     );
 
     if (!confirmed) return;
 
     try {
-      await userService.deleteUser(userId);
+      await userService.deactivateUser(userId);
 
-      setSuccess('User account deleted successfully.');
-      toast.success('User account deleted successfully.');
+      const message = `User "${username}" deactivated successfully.`;
+      setSuccess(message);
+      toast.success(message);
 
       await fetchUsers();
     } catch (err) {
-      console.error('Error deleting user:', err);
+      console.error('Error deactivating user:', err);
 
       const message =
         err.response?.data?.detail ||
         err.response?.data?.error ||
-        'Failed to delete user account.';
+        'Failed to deactivate user account.';
 
       setError(message);
       toast.error(message);
