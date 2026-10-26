@@ -1,8 +1,19 @@
 
+import os
+from django.urls import reverse
+from django.core.files.base import ContentFile
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from django.utils.text import get_valid_filename
+from rest_framework.response import Response
+from rest_framework import status
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 import uuid
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -102,6 +113,19 @@ class User(AbstractUser):
             < self.max_books_allowed
         )
 
+    def is_approved_member(self):
+        return (
+            self.is_active
+            and self.is_email_verified
+            and self.role in {
+                "student",
+                "academic_staff",
+                "librarian",
+                "digital_officer",
+                "admin",
+            }
+        )
+
 
 class EmailVerification(models.Model):
     user = models.OneToOneField(
@@ -127,7 +151,6 @@ class EmailVerification(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.expires_at:
-            from django.conf import settings
             
             self.expires_at = (
                 timezone.now()
@@ -275,4 +298,27 @@ class AuthorizedUser(models.Model):
 
     def __str__(self):
         return f"{self.student_id} - {self.first_name} {self.last_name}"
+
+class AuthorizedUserCSVUpload(models.Model):
+    """Retain uploaded authorized-user CSV files and import reports."""
+
+    original_filename = models.CharField(max_length=255)
+    file = models.FileField(upload_to="authorized_user_csvs/")
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="authorized_user_csv_uploads",
+    )
+    imported_count = models.PositiveIntegerField(default=0)
+    rejected_count = models.PositiveIntegerField(default=0)
+    errors = models.JSONField(default=list, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return self.original_filename
 

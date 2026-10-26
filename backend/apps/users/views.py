@@ -6,18 +6,24 @@ from .permissions import IsAdminUser, IsLibrarianUser, IsAuthenticatedReadOnly
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from django.db.models import Count, Q
+from django.core.files.base import ContentFile
+from django.db.models import Count, Q, Exists, OuterRef
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, Sum
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+
 from .models import (
     User,
     EmailVerification,
     PasswordResetToken,
     UserActivityLog,
     AuthorizedUser,
+    AuthorizedUserCSVUpload,
 )
 from .serializers import (
     UserSerializer, UserListSerializer, RegisterSerializer, LoginSerializer,
@@ -326,9 +332,45 @@ class AuthorizedUserCSVUploadView(generics.GenericAPIView):
                 except Exception:
                     pass
 
+        # Save the original CSV and import results for administrators.
+        try:
+            uploaded_file.seek(0)
+            raw_content = uploaded_file.read()
+
+            upload_record = AuthorizedUserCSVUpload(
+                original_filename=uploaded_file.name,
+                uploaded_by=request.user,
+                imported_count=imported,
+                rejected_count=len(errors),
+                errors=errors,
+            )
+            upload_record.file.save(
+                uploaded_file.name,
+                ContentFile(raw_content),
+                save=False,
+            )
+            upload_record.save()
+
+        except Exception:
+            logger.exception("Failed to save CSV upload history")
+            return Response(
+                {
+                    "error": (
+                        "CSV rows were processed, but upload history "
+                        "could not be saved. Check media storage."
+                    ),
+                    "imported": imported,
+                    "rejected": len(errors),
+                    "errors": errors,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         return Response(
             {
-                "message": "CSV import finished.",
+                "message": "CSV import finished and original file saved.",
+                "upload_id": upload_record.pk,
+                "filename": upload_record.original_filename,
                 "imported": imported,
                 "rejected": len(errors),
                 "errors": errors,
@@ -824,11 +866,6 @@ class GuestUpgradeView(views.APIView):
             'message': f'Account upgraded to {user.get_role_display()}',
             'user': UserSerializer(user).data
         })
-        
-        
-        
-
-
 
 class PublicStatsView(views.APIView):
     """
@@ -970,7 +1007,7 @@ class PublicDocumentationView(views.APIView):
                     {'name': 'Eliyas Kindie', 'id': '1400630'},
                     {'name': 'Hana Yaregal', 'id': '1400932'},
                 ],
-                'advisor': 'Mr. Yibeltal G.',
+                'advisor': 'Mr. Abebaw M.',
             },
             'features': [
                 {
@@ -1147,26 +1184,34 @@ class AuthorizedUserListCreateView(generics.GenericAPIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        records = AuthorizedUser.objects.order_by("student_id").values(
-            "id",
-            "student_id",
-            "first_name",
-            "last_name",
-            "email",
-            "phone",
-            "department",
-            "role",
-            "is_authorized",
-            "imported_at",
-            "updated_at",
-        )
-
+        registered_accounts = User.objects.filter(
+            Q(student_id__iexact=OuterRef("student_id"))
+            | Q(email__iexact=OuterRef("email"))
+            )
+        records = (
+            AuthorizedUser.objects
+            .annotate(
+                has_registered_account=Exists(registered_accounts)
+                )
+                .filter(has_registered_account=False)
+                .order_by("student_id")
+                .values(
+                    "id",
+                    "student_id",
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "phone",
+                    "department",
+                    "role",
+                    "is_authorized",
+                    "imported_at",
+                    "updated_at",
+                    )
+                    )
         return Response(list(records), status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
-        from django.core.validators import validate_email
-        from django.core.exceptions import ValidationError
-        from django.db import IntegrityError, transaction
 
         data = request.data
 
@@ -1268,3 +1313,215 @@ class AuthorizedUserListCreateView(generics.GenericAPIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+
+class AuthorizedUserDetailView(generics.GenericAPIView):
+    permission_classes = [IsAdminUser]
+
+    def get_object(self, pk):
+        try:
+            record = AuthorizedUser.objects.get(pk=pk)
+        except AuthorizedUser.DoesNotExist:
+            return None
+
+        linked = User.objects.filter(
+            Q(student_id__iexact=record.student_id)
+            | Q(email__iexact=record.email)
+        ).exists()
+
+        return "linked" if linked else record
+
+    def patch(self, request, pk, *args, **kwargs):
+        record = self.get_object(pk)
+
+        if record is None:
+            return Response(
+                {"error": "Authorized user not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if record == "linked":
+            return Response(
+                {"error": "This record matches a registered account and cannot be edited here."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        data = request.data
+        student_id = str(data.get("student_id", record.student_id)).strip()
+        first_name = str(data.get("first_name", record.first_name)).strip()
+        last_name = str(data.get("last_name", record.last_name)).strip()
+        email = str(data.get("email", record.email)).strip().lower()
+        phone = str(data.get("phone", record.phone)).strip()
+        department = str(data.get("department", record.department)).strip()
+        role = str(data.get("role", record.role)).strip().lower()
+        is_authorized = data.get("is_authorized", record.is_authorized)
+
+        if not all([student_id, first_name, last_name, email]):
+            return Response(
+                {"error": "Student ID, first name, last name, and email are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response(
+                {"error": "Enter a valid email address."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        allowed_roles = {
+            value for value, label in AuthorizedUser.ALLOWED_ROLES
+        }
+        if role not in allowed_roles:
+            return Response(
+                {"error": "Invalid role."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if isinstance(is_authorized, str):
+            if is_authorized.lower() not in ("true", "false"):
+                return Response(
+                    {"error": "Authorized status must be true or false."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            is_authorized = is_authorized.lower() == "true"
+
+        if not isinstance(is_authorized, bool):
+            return Response(
+                {"error": "Authorized status must be true or false."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if AuthorizedUser.objects.filter(
+            student_id__iexact=student_id
+        ).exclude(pk=record.pk).exists():
+            return Response(
+                {"error": "This student ID already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if AuthorizedUser.objects.filter(
+            email__iexact=email
+        ).exclude(pk=record.pk).exists():
+            return Response(
+                {"error": "This email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if User.objects.filter(
+            Q(student_id__iexact=student_id)
+            | Q(email__iexact=email)
+        ).exists():
+            return Response(
+                {"error": "This ID or email belongs to a registered account."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        record.student_id = student_id
+        record.first_name = first_name
+        record.last_name = last_name
+        record.email = email
+        record.phone = phone
+        record.department = department
+        record.role = role
+        record.is_authorized = is_authorized
+
+        try:
+            record.save()
+        except IntegrityError:
+            return Response(
+                {"error": "The ID or email already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {"message": "Authorized user updated successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, pk, *args, **kwargs):
+        record = self.get_object(pk)
+
+        if record is None:
+            return Response(
+                {"error": "Authorized user not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if record == "linked":
+            return Response(
+                {"error": "This record matches a registered account and cannot be deleted here."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        record.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+class AuthorizedUserCSVUploadHistoryView(generics.ListAPIView):
+    """List previous authorized-user CSV imports."""
+
+    permission_classes = [IsAdminUser]
+
+    def list(self, request, *args, **kwargs):
+        uploads = AuthorizedUserCSVUpload.objects.select_related(
+            "uploaded_by"
+        ).all()
+
+        results = [
+            {
+                "id": upload.pk,
+                "filename": upload.original_filename,
+                "imported_count": upload.imported_count,
+                "rejected_count": upload.rejected_count,
+                "errors": upload.errors,
+                "uploaded_at": upload.uploaded_at,
+                "uploaded_by": (
+                    upload.uploaded_by.username
+                    if upload.uploaded_by
+                    else None
+                ),
+                "download_url": request.build_absolute_uri(
+                    f"/api/users/admin/authorized-users/"
+                    f"csv-uploads/{upload.pk}/download/"
+                ),
+            }
+            for upload in uploads
+        ]
+        return Response(results)
+
+
+class AuthorizedUserCSVDownloadView(generics.GenericAPIView):
+    """Download a previously uploaded CSV file."""
+
+    permission_classes = [IsAdminUser]
+
+    def get(self, request, pk, *args, **kwargs):
+        from django.http import FileResponse
+        from django.shortcuts import get_object_or_404
+
+        upload = get_object_or_404(AuthorizedUserCSVUpload, pk=pk)
+
+        if not upload.file:
+            return Response(
+                {"error": "No original CSV file is available."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            upload.file.open("rb")
+            return FileResponse(
+                upload.file,
+                as_attachment=True,
+                filename=upload.original_filename,
+                content_type="text/csv",
+            )
+        except (OSError, ValueError):
+            return Response(
+                {"error": "The original CSV file could not be opened."},
+                status=status.HTTP_404_NOT_FOUND,
+            )

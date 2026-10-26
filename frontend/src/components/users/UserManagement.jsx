@@ -28,6 +28,22 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+    // Registered-user editing
+  const [editingRegisteredUser, setEditingRegisteredUser] = useState(null);
+  const [registeredUserForm, setRegisteredUserForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    department: '',
+  });
+  const [savingRegisteredUser, setSavingRegisteredUser] = useState(false);
+
+  // Registered-user search and pagination
+  const [userSearch, setUserSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage, setUsersPerPage] = useState('10');
+
   // Page messages
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -37,7 +53,7 @@ const UserManagement = () => {
   const [csvUploading, setCsvUploading] = useState(false);
   const [csvResults, setCsvResults] = useState(null);
 
-  // Authorized users imported from CSV or added manually
+  // Authorized users
   const [authorizedUsers, setAuthorizedUsers] = useState([]);
   const [authorizedLoading, setAuthorizedLoading] = useState(false);
   const [showAddAuthorizedForm, setShowAddAuthorizedForm] =
@@ -48,11 +64,17 @@ const UserManagement = () => {
   });
   const [authorizedSaving, setAuthorizedSaving] = useState(false);
 
+  const [editingAuthorizedUser, setEditingAuthorizedUser] = useState(null);
+  const [editAuthorizedForm, setEditAuthorizedForm] = useState({
+    ...EMPTY_AUTHORIZED_FORM,
+  });
+  const [editAuthorizedSaving, setEditAuthorizedSaving] = useState(false);
+
   const isAdmin = user?.role === 'admin';
   const hasAccess = isAdmin || user?.role === 'librarian';
 
   // --------------------------------------------------
-  // Load registered user accounts
+  // Load registered users
   // --------------------------------------------------
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -77,15 +99,13 @@ const UserManagement = () => {
       if (err.response?.status === 401) {
         message = 'Please log in to view users.';
       } else if (err.response?.status === 403) {
-        message =
-          'You do not have permission to view registered users.';
+        message = 'You do not have permission to view registered users.';
       } else if (err.response?.data?.detail) {
         message = err.response.data.detail;
       } else if (err.response?.data?.error) {
         message = err.response.data.error;
       } else if (!err.response) {
-        message =
-          'Cannot connect to the backend. Check that Django is running.';
+        message = 'Cannot connect to the backend. Check that Django is running.';
       }
 
       setError(message);
@@ -97,7 +117,7 @@ const UserManagement = () => {
   }, []);
 
   // --------------------------------------------------
-  // Load CSV-authorized users
+  // Load authorized users
   // --------------------------------------------------
   const fetchAuthorizedUsers = useCallback(async () => {
     if (!isAdmin) {
@@ -151,7 +171,7 @@ const UserManagement = () => {
   }, [user, hasAccess, isAdmin, fetchUsers, fetchAuthorizedUsers]);
 
   // --------------------------------------------------
-  // Update registered user's role
+  // Update user role
   // --------------------------------------------------
   const handleRoleChange = async (userId, newRole) => {
     try {
@@ -174,13 +194,65 @@ const UserManagement = () => {
     }
   };
 
+
+const handleEditRegisteredUser = (userItem) => {
+  setEditingRegisteredUser(userItem);
+  setRegisteredUserForm({
+    first_name: userItem.first_name || '',
+    last_name: userItem.last_name || '',
+    email: userItem.email || '',
+    phone: userItem.phone || '',
+    department: userItem.department || '',
+  });
+};
+
+const handleRegisteredUserFormChange = (event) => {
+  const { name, value } = event.target;
+
+  setRegisteredUserForm((previous) => ({
+    ...previous,
+    [name]: value,
+  }));
+};
+
+const handleSaveRegisteredUser = async (event) => {
+  event.preventDefault();
+
+  if (!editingRegisteredUser) return;
+
+  setSavingRegisteredUser(true);
+
+  try {
+    await userService.partialUpdateUser(
+      editingRegisteredUser.id,
+      registeredUserForm
+    );
+
+    toast.success('User details updated successfully.');
+    setEditingRegisteredUser(null);
+    await fetchUsers();
+  } catch (error) {
+    console.error('Error updating user:', error);
+
+    const message =
+      error.response?.data?.detail ||
+      error.response?.data?.error ||
+      Object.values(error.response?.data || {})
+        .flat()
+        .find((value) => typeof value === 'string') ||
+      'Failed to update user. Please try again.';
+
+    toast.error(message);
+  } finally {
+    setSavingRegisteredUser(false);
+  }
+};
+
   // --------------------------------------------------
-  // Activate or deactivate registered account
+  // Activate or deactivate account
   // --------------------------------------------------
   const handleToggleActive = async (userId) => {
-    const userToToggle = users.find(
-      (item) => item.id === userId
-    );
+    const userToToggle = users.find((item) => item.id === userId);
 
     if (!userToToggle) {
       toast.error('User account not found.');
@@ -216,12 +288,12 @@ const UserManagement = () => {
   };
 
   // --------------------------------------------------
-  // Delete registered account
+  // Delete account
   // --------------------------------------------------
   const handleDeleteUser = async (userId, username) => {
     const confirmed = window.confirm(
       `Are you sure you want to delete user "${username}"? ` +
-      'This action cannot be undone.'
+        'This action cannot be undone.'
     );
 
     if (!confirmed) return;
@@ -247,7 +319,7 @@ const UserManagement = () => {
   };
 
   // --------------------------------------------------
-  // Upload CSV file
+  // Upload authorized users CSV
   // --------------------------------------------------
   const handleCSVUpload = async (event) => {
     event.preventDefault();
@@ -272,7 +344,6 @@ const UserManagement = () => {
         await userService.uploadAuthorizedUsersCSV(csvFile);
 
       const result = response.data || {};
-
       const imported = Number(result.imported ?? 0);
       const rejected = Number(result.rejected ?? 0);
 
@@ -286,7 +357,6 @@ const UserManagement = () => {
 
       if (Array.isArray(result.errors) && result.errors.length > 0) {
         console.warn('CSV row errors:', result.errors);
-
         toast.warning(
           'Some CSV rows were rejected. Check the import results.'
         );
@@ -294,20 +364,14 @@ const UserManagement = () => {
 
       setCsvFile(null);
 
-      // Immediately refresh the authorized-users table.
       await fetchAuthorizedUsers();
 
-      // Refresh the file input.
-      const input = document.getElementById(
-        'authorized-users-csv'
-      );
-
+      const input = document.getElementById('authorized-users-csv');
       if (input) input.value = '';
     } catch (err) {
       console.error('CSV upload failed:', err);
 
       const data = err.response?.data;
-
       const message =
         data?.error ||
         data?.detail ||
@@ -321,7 +385,7 @@ const UserManagement = () => {
   };
 
   // --------------------------------------------------
-  // Add one authorized user manually
+  // Add authorized user manually
   // --------------------------------------------------
   const handleAuthorizedFormChange = (event) => {
     const { name, value } = event.target;
@@ -386,7 +450,6 @@ const UserManagement = () => {
       console.error('Failed to add authorized user:', err);
 
       const data = err.response?.data;
-
       const message =
         data?.error ||
         data?.detail ||
@@ -401,6 +464,119 @@ const UserManagement = () => {
       );
     } finally {
       setAuthorizedSaving(false);
+    }
+  };
+
+
+  // --------------------------------------------------
+  // Edit authorized roster record
+  // --------------------------------------------------
+  const handleEditAuthorizedUser = (item) => {
+    setEditingAuthorizedUser(item);
+    setEditAuthorizedForm({
+      student_id: item.student_id || '',
+      first_name: item.first_name || '',
+      last_name: item.last_name || '',
+      email: item.email || '',
+      phone: item.phone || '',
+      department: item.department || '',
+      role: item.role || 'student',
+      is_authorized: item.is_authorized ?? true,
+    });
+  };
+
+  const handleEditAuthorizedFormChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditAuthorizedForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveAuthorizedUser = async (event) => {
+    event.preventDefault();
+
+    if (!editingAuthorizedUser?.id) {
+      toast.error('Cannot edit this record because its ID is missing.');
+      return;
+    }
+
+    const payload = {
+      ...editAuthorizedForm,
+      student_id: editAuthorizedForm.student_id.trim(),
+      first_name: editAuthorizedForm.first_name.trim(),
+      last_name: editAuthorizedForm.last_name.trim(),
+      email: editAuthorizedForm.email.trim().toLowerCase(),
+      phone: editAuthorizedForm.phone.trim(),
+      department: editAuthorizedForm.department.trim(),
+    };
+
+    setEditAuthorizedSaving(true);
+
+    try {
+      const response = await userService.updateAuthorizedUser(
+        editingAuthorizedUser.id,
+        payload
+      );
+
+      toast.success(
+        response.data?.message || 'Authorized user updated successfully.'
+      );
+
+      setEditingAuthorizedUser(null);
+      await fetchAuthorizedUsers();
+    } catch (err) {
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        'Failed to update authorized user.';
+
+      toast.error(message);
+    } finally {
+      setEditAuthorizedSaving(false);
+    }
+  };
+
+  const handleCancelEditAuthorizedUser = () => {
+    setEditingAuthorizedUser(null);
+    setEditAuthorizedForm({ ...EMPTY_AUTHORIZED_FORM });
+  };
+
+  // --------------------------------------------------
+  // Delete authorized roster record
+  // --------------------------------------------------
+  const handleDeleteAuthorizedUser = async (item) => {
+    if (!item?.id) {
+      toast.error('Cannot delete this record because its ID is missing.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete authorized roster record for ${item.first_name || ''} ${
+        item.last_name || ''
+      } (${item.student_id || 'no ID'})? This does not delete a registered login account.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await userService.deleteAuthorizedUser(item.id);
+
+      toast.success('Authorized roster record deleted.');
+
+      if (editingAuthorizedUser?.id === item.id) {
+        handleCancelEditAuthorizedUser();
+      }
+
+      await fetchAuthorizedUsers();
+    } catch (err) {
+      const message =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        'Failed to delete authorized user.';
+
+      toast.error(message);
     }
   };
 
@@ -427,6 +603,62 @@ const UserManagement = () => {
   });
 
   // --------------------------------------------------
+  // Search and paginate registered users
+  // --------------------------------------------------
+  const filteredUsers = users.filter((item) => {
+    const searchableText = [
+      item.id,
+      item.username,
+      item.first_name,
+      item.last_name,
+      item.email,
+      item.role,
+      item.department,
+      item.is_active !== false ? 'active' : 'inactive',
+    ]
+      .filter((value) => value !== null && value !== undefined)
+      .join(' ')
+      .toLowerCase();
+
+    return searchableText.includes(userSearch.trim().toLowerCase());
+  });
+
+  const showAllUsers = usersPerPage === 'all';
+
+const pageSize = showAllUsers
+  ? Math.max(filteredUsers.length, 1)
+  : Number(usersPerPage);
+
+const totalPages = showAllUsers
+  ? 1
+  : Math.ceil(filteredUsers.length / pageSize);
+
+const paginatedUsers = showAllUsers
+  ? filteredUsers
+  : filteredUsers.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
+    );
+
+const firstUserNumber =
+  filteredUsers.length === 0
+    ? 0
+    : showAllUsers
+      ? 1
+      : (currentPage - 1) * pageSize + 1;
+
+const lastUserNumber = showAllUsers
+  ? filteredUsers.length
+  : Math.min(currentPage * pageSize, filteredUsers.length);
+
+  // Keep the page valid when search results or user count changes.
+  useEffect(() => {
+    setCurrentPage((page) =>
+      Math.max(1, Math.min(page, totalPages || 1))
+    );
+  }, [totalPages]);
+
+  // --------------------------------------------------
   // Login and permission checks
   // --------------------------------------------------
   if (!user) {
@@ -450,8 +682,7 @@ const UserManagement = () => {
           You need Admin or Librarian permissions to view this page.
         </p>
         <p className="text-muted">
-          Your current role:{' '}
-          <strong>{user.role || 'Unknown'}</strong>
+          Your current role: <strong>{user.role || 'Unknown'}</strong>
         </p>
       </div>
     );
@@ -499,7 +730,6 @@ const UserManagement = () => {
         <div className="alert alert-danger alert-dismissible fade show">
           <i className="bi bi-exclamation-triangle-fill me-2"></i>
           {error}
-
           <button
             type="button"
             className="btn-close"
@@ -513,7 +743,6 @@ const UserManagement = () => {
         <div className="alert alert-success alert-dismissible fade show">
           <i className="bi bi-check-circle-fill me-2"></i>
           {success}
-
           <button
             type="button"
             className="btn-close"
@@ -523,10 +752,10 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Authorized-user management is admin-only */}
+      {/* Admin-only authorized-user management */}
       {isAdmin && (
         <>
-          {/* CSV upload and Add User buttons */}
+          {/* CSV upload and Add User */}
           <div className="card mb-4">
             <div className="card-header">
               <h5 className="mb-0">
@@ -542,12 +771,10 @@ const UserManagement = () => {
               </p>
 
               <div className="d-flex flex-wrap align-items-end gap-3">
-                {/* Add User button is to the left of CSV upload */}
                 <div>
                   <label className="form-label d-block">
                     Add a user manually
                   </label>
-
                   <button
                     type="button"
                     className="btn btn-success"
@@ -562,7 +789,6 @@ const UserManagement = () => {
                   </button>
                 </div>
 
-                {/* CSV upload */}
                 <form
                   onSubmit={handleCSVUpload}
                   className="flex-grow-1"
@@ -620,7 +846,8 @@ const UserManagement = () => {
           </div>
 
           {/* CSV import results */}
-          {csvResults && Array.isArray(csvResults.errors) &&
+          {csvResults &&
+            Array.isArray(csvResults.errors) &&
             csvResults.errors.length > 0 && (
               <div className="card border-warning mb-4">
                 <div className="card-header bg-warning-subtle">
@@ -629,11 +856,9 @@ const UserManagement = () => {
 
                 <div className="card-body">
                   <p>
-                    Imported:{' '}
-                    <strong>{csvResults.imported ?? 0}</strong>
+                    Imported: <strong>{csvResults.imported ?? 0}</strong>
                     {' | '}
-                    Rejected:{' '}
-                    <strong>{csvResults.rejected ?? 0}</strong>
+                    Rejected: <strong>{csvResults.rejected ?? 0}</strong>
                   </p>
 
                   <div className="table-responsive">
@@ -644,13 +869,10 @@ const UserManagement = () => {
                           <th>Error</th>
                         </tr>
                       </thead>
-
                       <tbody>
                         {csvResults.errors.map((item, index) => (
                           <tr key={index}>
-                            <td>
-                              {item.row ?? item.line ?? index + 1}
-                            </td>
+                            <td>{item.row ?? item.line ?? index + 1}</td>
                             <td>
                               {item.error ||
                                 item.message ||
@@ -682,7 +904,6 @@ const UserManagement = () => {
                       >
                         Student / Staff ID *
                       </label>
-
                       <input
                         id="authorized-student-id"
                         name="student_id"
@@ -701,7 +922,6 @@ const UserManagement = () => {
                       >
                         First Name *
                       </label>
-
                       <input
                         id="authorized-first-name"
                         name="first_name"
@@ -720,7 +940,6 @@ const UserManagement = () => {
                       >
                         Last Name *
                       </label>
-
                       <input
                         id="authorized-last-name"
                         name="last_name"
@@ -739,7 +958,6 @@ const UserManagement = () => {
                       >
                         Email *
                       </label>
-
                       <input
                         id="authorized-email"
                         name="email"
@@ -758,7 +976,6 @@ const UserManagement = () => {
                       >
                         Phone
                       </label>
-
                       <input
                         id="authorized-phone"
                         name="phone"
@@ -776,7 +993,6 @@ const UserManagement = () => {
                       >
                         Department
                       </label>
-
                       <input
                         id="authorized-department"
                         name="department"
@@ -794,7 +1010,6 @@ const UserManagement = () => {
                       >
                         Role
                       </label>
-
                       <select
                         id="authorized-role"
                         name="role"
@@ -803,10 +1018,7 @@ const UserManagement = () => {
                         onChange={handleAuthorizedFormChange}
                       >
                         {AUTHORIZED_ROLES.map((role) => (
-                          <option
-                            key={role.value}
-                            value={role.value}
-                          >
+                          <option key={role.value} value={role.value}>
                             {role.label}
                           </option>
                         ))}
@@ -831,9 +1043,7 @@ const UserManagement = () => {
                       disabled={authorizedSaving}
                       onClick={() => {
                         setShowAddAuthorizedForm(false);
-                        setAuthorizedForm({
-                          ...EMPTY_AUTHORIZED_FORM,
-                        });
+                        setAuthorizedForm({ ...EMPTY_AUTHORIZED_FORM });
                       }}
                     >
                       Cancel
@@ -876,39 +1086,143 @@ const UserManagement = () => {
                 login accounts.
               </p>
 
-              <div className="mb-3">
-                <label
-                  htmlFor="authorized-user-search"
-                  className="form-label"
-                >
-                  Search authorized users
-                </label>
 
-                <input
-                  id="authorized-user-search"
+              {editingAuthorizedUser && (
+                <div className="card border-primary mb-4">
+                  <div className="card-header">
+                    <strong>Edit Authorized User</strong>
+                  </div>
+                  <div className="card-body">
+                    <form onSubmit={handleSaveAuthorizedUser}>
+                      <div className="row g-3">
+                        {[
+                          ['student_id', 'Student / Staff ID'],
+                          ['first_name', 'First Name'],
+                          ['last_name', 'Last Name'],
+                          ['email', 'Email'],
+                          ['phone', 'Phone'],
+                          ['department', 'Department'],
+                        ].map(([name, label]) => (
+                          <div className="col-md-4" key={name}>
+                            <label
+                              className="form-label"
+                              htmlFor={`edit-authorized-${name}`}
+                            >
+                              {label}
+                            </label>
+                            <input
+                              id={`edit-authorized-${name}`}
+                              name={name}
+                              type={name === 'email' ? 'email' : 'text'}
+                              className="form-control"
+                              value={editAuthorizedForm[name]}
+                              onChange={handleEditAuthorizedFormChange}
+                              required={[
+                                'student_id',
+                                'first_name',
+                                'last_name',
+                                'email',
+                              ].includes(name)}
+                            />
+                          </div>
+                        ))}
+
+                        <div className="col-md-4">
+                          <label
+                            className="form-label"
+                            htmlFor="edit-authorized-role"
+                          >
+                            Role
+                          </label>
+                          <select
+                            id="edit-authorized-role"
+                            name="role"
+                            className="form-select"
+                            value={editAuthorizedForm.role}
+                            onChange={handleEditAuthorizedFormChange}
+                            required
+                          >
+                            {AUTHORIZED_ROLES.map((role) => (
+                              <option key={role.value} value={role.value}>
+                                {role.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="col-md-4">
+                          <label
+                            className="form-label"
+                            htmlFor="edit-authorized-status"
+                          >
+                            Authorization Status
+                          </label>
+                          <select
+                            id="edit-authorized-status"
+                            name="is_authorized"
+                            className="form-select"
+                            value={String(
+                              editAuthorizedForm.is_authorized ?? true
+                            )}
+                            onChange={(event) =>
+                              setEditAuthorizedForm((previous) => ({
+                                ...previous,
+                                is_authorized:
+                                  event.target.value === 'true',
+                              }))
+                            }
+                          >
+                            <option value="true">Authorized</option>
+                            <option value="false">Not authorized</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="d-flex gap-2 mt-3">
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={editAuthorizedSaving}
+                        >
+                          {editAuthorizedSaving
+                            ? 'Saving...'
+                            : 'Save Changes'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleCancelEditAuthorizedUser}
+                          disabled={editAuthorizedSaving}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+
+              <div className="input-group mb-3" style={{ maxWidth: '100%' }}>
+                <span className="input-group-text">
+                  <i className="bi bi-search" aria-hidden="true"></i>
+                  </span>
+                  <input
                   type="search"
                   className="form-control"
                   placeholder="Search by ID, name, email, phone, department, or role..."
+                  aria-label="Search authorized users"
                   value={authorizedSearch}
-                  onChange={(event) =>
-                    setAuthorizedSearch(event.target.value)
-                  }
-                />
-              </div>
+                  onChange={(event) => setAuthorizedSearch(event.target.value)}
+                  />
+                  </div>
 
               {authorizedLoading ? (
                 <div className="text-center py-4">
-                  <div
-                    className="spinner-border text-primary"
-                    role="status"
-                  >
-                    <span className="visually-hidden">
-                      Loading...
-                    </span>
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
                   </div>
-                  <p className="mt-2">
-                    Loading authorized users...
-                  </p>
+                  <p className="mt-2">Loading authorized users...</p>
                 </div>
               ) : (
                 <div className="table-responsive">
@@ -923,6 +1237,7 @@ const UserManagement = () => {
                         <th>Department</th>
                         <th>Role</th>
                         <th>Authorized</th>
+                        <th> Actions</th>
                       </tr>
                     </thead>
 
@@ -951,12 +1266,42 @@ const UserManagement = () => {
                               {item.is_authorized ? 'Yes' : 'No'}
                             </span>
                           </td>
+
+
+                          <td>
+                            <div className="d-flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => handleEditAuthorizedUser(item)}
+                              >
+                                <i
+                                  className="bi bi-pencil-square me-1"
+                                  aria-hidden="true"
+                                ></i>
+                                Edit
+                              </button>
+
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeleteAuthorizedUser(item)}
+                              >
+                                <i
+                                  className="bi bi-trash me-1"
+                                  aria-hidden="true"
+                                ></i>
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+
                         </tr>
                       ))}
 
                       {filteredAuthorizedUsers.length === 0 && (
                         <tr>
-                          <td colSpan="8" className="text-center py-4">
+                          <td colSpan="9" className="text-center py-4">
                             {authorizedUsers.length === 0
                               ? 'No authorized users found. Upload a CSV file or click Add User.'
                               : 'No users match your search.'}
@@ -972,7 +1317,7 @@ const UserManagement = () => {
         </>
       )}
 
-      {/* Registered login accounts table */}
+      {/* Registered login accounts */}
       <div className="card mb-4">
         <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
           <h5 className="mb-0">
@@ -980,9 +1325,7 @@ const UserManagement = () => {
             Registered User Accounts
           </h5>
 
-          <span className="text-muted">
-            Total: {users.length}
-          </span>
+          <span className="text-muted">Total: {users.length}</span>
         </div>
 
         <div className="card-body">
@@ -993,12 +1336,211 @@ const UserManagement = () => {
             verification process.
           </p>
 
-          {users.length === 0 ? (
+
+{editingRegisteredUser && (
+  <div className="card shadow-sm mb-4">
+    <div className="card-header d-flex justify-content-between align-items-center">
+      <h5 className="mb-0">
+        Edit User: {editingRegisteredUser.username}
+      </h5>
+
+      <button
+        type="button"
+        className="btn-close"
+        aria-label="Close"
+        onClick={() => setEditingRegisteredUser(null)}
+        disabled={savingRegisteredUser}
+      />
+    </div>
+
+    <div className="card-body">
+      <form onSubmit={handleSaveRegisteredUser}>
+        <div className="row g-3">
+          {[
+            { name: 'first_name', label: 'First Name' },
+            { name: 'last_name', label: 'Last Name' },
+            { name: 'email', label: 'Email', type: 'email' },
+            { name: 'phone', label: 'Phone Number' },
+            { name: 'department', label: 'Department' },
+          ].map((field) => (
+            <div className="col-md-6" key={field.name}>
+              <label
+                htmlFor={`registered-${field.name}`}
+                className="form-label"
+              >
+                {field.label}
+              </label>
+
+              <input
+                id={`registered-${field.name}`}
+                type={field.type || 'text'}
+                name={field.name}
+                className="form-control"
+                value={registeredUserForm[field.name]}
+                onChange={handleRegisteredUserFormChange}
+                required={field.name === 'email'}
+                disabled={savingRegisteredUser}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 d-flex gap-2">
+          <button
+            type="submit"
+            className="btn btn-success"
+            disabled={savingRegisteredUser}
+          >
+            {savingRegisteredUser ? 'Saving...' : 'Save Changes'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setEditingRegisteredUser(null)}
+            disabled={savingRegisteredUser}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+
+          {/* Search and pagination side by side */}
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div
+              className="flex-grow-1"
+              style={{ minWidth: '240px', maxWidth: '1000px' }}
+            >
+              <div className="input-group">
+                <span className="input-group-text">
+                  <i className="bi bi-search" aria-hidden="true"></i>
+                  </span>
+                  <input
+                  type="search"
+                  className="form-control"
+                  placeholder="Search by username, name, email, role, department, or status..."
+                  aria-label="Search registered users"
+                  value={userSearch}
+                  onChange={(event) => {
+                    setUserSearch(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  />
+                  </div>
+            </div>
+
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <label
+                htmlFor="registered-users-page-size"
+                className="text-muted small mb-0"
+              >
+                Show:
+              </label>
+
+              <select
+                id="registered-users-page-size"
+                className="form-select form-select-sm"
+                style={{ width: 'auto' }}
+                value={usersPerPage}
+                onChange={(event) => {
+                  setUsersPerPage(event.target.value);
+                  setCurrentPage(1);
+                }}
+                aria-label="Number of registered users per page"
+              >
+                <option value="10">10</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">All</option>
+              </select>
+
+              {!showAllUsers && totalPages > 1 && (
+                <nav aria-label="Registered users pagination">
+                  <ul className="pagination pagination-sm mb-0">
+                    <li
+                      className={`page-item ${
+                        currentPage === 1 ? 'disabled' : ''
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className="page-link"
+                        onClick={() =>
+                          setCurrentPage((page) => Math.max(1, page - 1))
+                        }
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </button>
+                    </li>
+
+                    {Array.from(
+                      { length: totalPages },
+                      (_, index) => index + 1
+                    ).map((page) => (
+                      <li
+                        key={page}
+                        className={`page-item ${
+                          currentPage === page ? 'active' : ''
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          className="page-link"
+                          onClick={() => setCurrentPage(page)}
+                          aria-current={
+                            currentPage === page ? 'page' : undefined
+                          }
+                        >
+                          {page}
+                        </button>
+                      </li>
+                    ))}
+
+                    <li
+                      className={`page-item ${
+                        currentPage === totalPages || totalPages === 0
+                          ? 'disabled'
+                          : ''
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className="page-link"
+                        onClick={() =>
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1)
+                          )
+                        }
+                        disabled={
+                          currentPage === totalPages || totalPages === 0
+                        }
+                      >
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              )}
+            </div>
+          </div>
+
+          {filteredUsers.length === 0 ? (
             <div className="text-center py-5 bg-light rounded">
               <div style={{ fontSize: '4rem' }}>👥</div>
-              <h4>No registered accounts found</h4>
+              <h4>
+                {users.length === 0
+                  ? 'No registered accounts found'
+                  : 'No matching users found'}
+              </h4>
               <p className="text-muted">
-                User accounts will appear here after registration.
+                {users.length === 0
+                  ? 'User accounts will appear here after registration.'
+                  : 'Try another search term.'}
               </p>
             </div>
           ) : (
@@ -1017,24 +1559,19 @@ const UserManagement = () => {
                 </thead>
 
                 <tbody>
-                  {users.map((userItem) => (
+                  {paginatedUsers.map((userItem) => (
                     <tr key={userItem.id}>
                       <td>
-                        {String(userItem.id || '').slice(0, 8) ||
-                          'N/A'}
+                        {String(userItem.id || '').slice(0, 8) || 'N/A'}
                       </td>
 
                       <td>
-                        <strong>
-                          {userItem.username || 'N/A'}
-                        </strong>
+                        <strong>{userItem.username || 'N/A'}</strong>
 
-                        {(userItem.first_name ||
-                          userItem.last_name) && (
+                        {(userItem.first_name || userItem.last_name) && (
                           <div>
                             <small className="text-muted">
-                              {userItem.first_name}{' '}
-                              {userItem.last_name}
+                              {userItem.first_name} {userItem.last_name}
                             </small>
                           </div>
                         )}
@@ -1087,52 +1624,63 @@ const UserManagement = () => {
                         </span>
                       </td>
 
-                      <td>
-                        <div className="btn-group btn-group-sm">
+                      <td >
+                        <div className="d-flex flex-row flex-wrap align-items-center gap-2">
+
+                          {/* Activate / Deactivate */}
                           <button
-                            type="button"
-                            className={`btn ${
-                              userItem.is_active !== false
-                                ? 'btn-warning'
-                                : 'btn-success'
-                            }`}
-                            onClick={() =>
-                              handleToggleActive(userItem.id)
-                            }
-                            title={
-                              userItem.is_active !== false
-                                ? 'Deactivate'
-                                : 'Activate'
-                            }
-                            disabled={
-                              userItem.id === user.id ||
-                              user?.role !== 'admin'
-                            }
+                          type="button"
+                          className={`btn btn-sm ${
+                            userItem.is_active !== false
+                            ? 'btn-warning'
+                            : 'btn-success'
+                          }`}
+                          onClick={() => handleToggleActive(userItem.id)}
+                          title={
+                            userItem.is_active !== false
+                            ? 'Deactivate'
+                            : 'Activate'
+                          }
+                          disabled={
+                            userItem.id === user.id ||
+                            user?.role !== 'admin'
+                          }
                           >
                             {userItem.is_active !== false
-                              ? 'Deactivate'
-                              : 'Activate'}
-                          </button>
+                            ? 'Deactivate'
+                            : 'Activate'}
+                            </button>
 
-                          <button
+                            {/* Edit */}
+                            <button
                             type="button"
-                            className="btn btn-danger"
-                            onClick={() =>
-                              handleDeleteUser(
-                                userItem.id,
-                                userItem.username
-                              )
-                            }
-                            title="Delete User"
-                            disabled={
-                              userItem.id === user.id ||
-                              user?.role !== 'admin'
-                            }
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleEditRegisteredUser(userItem)}
+                            disabled={user?.role !== 'admin'}
+                            title="Edit user details"
+                            >
+                              <i className="bi bi-pencil-square me-1"></i>
+                              Edit
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              onClick={() =>
+                                handleDeleteUser(userItem.id, userItem.username)
+                              }
+                              title="Delete user"
+                              disabled={
+                                userItem.id === user.id ||
+                                user?.role !== 'admin'
+                              }
+                              >
+                                <i className="bi bi-trash me-1"></i>
+                                Delete
+                                </button>
+                                </div>
+                                </td>
                     </tr>
                   ))}
                 </tbody>

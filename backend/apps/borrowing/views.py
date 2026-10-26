@@ -17,6 +17,30 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
             return BorrowRecord.objects.all()
         return BorrowRecord.objects.filter(user=user)
 
+    @action(detail=False, methods=["get"], url_path="can-borrow")
+    def can_borrow(self, request):
+        user = request.user
+        approved = user.is_approved_member()
+        within_limit = user.can_borrow()
+
+        if not approved:
+            message = (
+                "Your account must be active, email-verified, "
+                "and have an eligible role to borrow books."
+            )
+        elif not within_limit:
+            message = "You have reached your borrowing limit."
+        else:
+            message = "You are eligible to borrow books."
+
+        return Response({
+            "can_borrow": approved and within_limit,
+            "is_approved_member": approved,
+            "active_borrowings_count": user.get_active_borrowings_count(),
+            "max_books_allowed": user.max_books_allowed,
+            "message": message,
+        })
+
     @action(detail=False, methods=["post"])
     def issue(self, request):
         book_id = request.data.get("book_id")

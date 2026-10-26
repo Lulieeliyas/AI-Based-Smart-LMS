@@ -4,9 +4,15 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny,Is
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import models
-from .models import Book,Category
-from .serializers import BookSerializer, BookListSerializer,CategorySerializer
+from .models import Book, Category, Rating
+from .serializers import (
+    BookSerializer,
+    BookListSerializer,
+    CategorySerializer,
+    RatingSerializer,
+)
 from apps.users.permissions import IsLibrarianUser
+from rest_framework.exceptions import ValidationError
 
 class BookListCreateView(generics.ListCreateAPIView):
     """
@@ -99,3 +105,27 @@ class CategoryListCreateView(generics.ListCreateAPIView):
         if self.request.method == 'POST':
             return [IsAuthenticated(), IsLibrarianUser()]
         return [AllowAny()]
+
+class BookReviewListCreateView(generics.ListCreateAPIView):
+    serializer_class = RatingSerializer
+
+    def get_queryset(self):
+        return Rating.objects.filter(
+            book_id=self.kwargs["book_id"]
+        ).select_related("user", "book").order_by("-created_at")
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated()]
+        return [AllowAny()]
+
+    def perform_create(self, serializer):
+        book_id = self.kwargs["book_id"]
+
+        if not Book.objects.filter(pk=book_id).exists():
+            raise ValidationError({"detail": "Book not found."})
+
+        serializer.save(
+            user=self.request.user,
+            book_id=book_id,
+        )

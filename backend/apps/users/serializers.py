@@ -61,29 +61,41 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return value
 
+
     def validate_email(self, value):
-        """Ensure email uniqueness when updating."""
+        """Ensure email uniqueness when creating or updating a user."""
         if value:
             value = value.lower().strip()
-            # Check if another user has this email
-            request = self.context.get('request')
-            if request and request.user:
-                if User.objects.filter(email__iexact=value).exclude(id=request.user.id).exists():
-                    raise serializers.ValidationError(
-                        "A user with this email already exists."
-                    )
+
+            # Exclude the user being edited, not the logged-in admin.
+            users = User.objects.filter(email__iexact=value)
+
+            if self.instance:
+                users = users.exclude(pk=self.instance.pk)
+
+            if users.exists():
+                raise serializers.ValidationError(
+                    "A user with this email already exists."
+                )
+
         return value
 
     def validate_phone(self, value):
-        """Ensure phone uniqueness when updating."""
+        """Ensure phone uniqueness when creating or updating a user."""
         if value:
             value = value.strip().replace(' ', '').replace('-', '')
-            request = self.context.get('request')
-            if request and request.user:
-                if User.objects.filter(phone=value).exclude(id=request.user.id).exists():
-                    raise serializers.ValidationError(
-                        "This phone number is already registered."
-                    )
+
+            # Exclude the user being edited, not the logged-in admin.
+            users = User.objects.filter(phone=value)
+
+            if self.instance:
+                users = users.exclude(pk=self.instance.pk)
+
+            if users.exists():
+                raise serializers.ValidationError(
+                    "This phone number is already registered."
+                )
+
         return value
 
 

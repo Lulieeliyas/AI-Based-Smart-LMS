@@ -8,18 +8,19 @@ const borrowingService = {
 
     // ✅ Check if user can borrow
   canBorrow: () => {
-    return apiClient.get('/borrowing/can-borrow/');
+    return apiClient.get('/borrowing/borrows/can-borrow/');
   },
 
-  borrowBook: (bookId, borrowData = {}) => {
-    return apiClient.post('/borrowing/borrow/', { 
-      book: bookId,
-      ...borrowData 
+  borrowBook: (bookId) => {
+    return apiClient.post('/borrowing/borrows/issue/', {
+      book_id: bookId,
     });
   },
-  
+
   returnBook: (borrowingId) => {
-    return apiClient.put(`/borrowing/borrow/${borrowingId}/return/`);
+    return apiClient.post(
+      `/borrowing/borrows/${borrowingId}/return/`
+    );
   },
   
   renewBorrowing: (borrowingId) => {

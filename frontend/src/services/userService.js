@@ -83,7 +83,20 @@ changePassword: (oldPasswordOrData, newPassword) => {
 createAuthorizedUser: (data) => {
   return apiClient.post('/users/admin/authorized-users/', data);
 },
-  
+
+updateAuthorizedUser: (id, data) => {
+  return apiClient.patch(
+    `/users/admin/authorized-users/${id}/`,
+    data
+  );
+},
+
+deleteAuthorizedUser: (id) => {
+  return apiClient.delete(
+    `/users/admin/authorized-users/${id}/`
+  );
+},
+
   getUsers: () => {
   return apiClient.get('/users/users/');
 },

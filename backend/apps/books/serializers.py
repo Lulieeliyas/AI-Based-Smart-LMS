@@ -15,7 +15,7 @@ class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         fields = ["id", "user", "book", "score", "review", "created_at"]
-        read_only_fields = ["user", "created_at"]
+        read_only_fields = ["user", "book", "created_at"]
 
 
 class BookListSerializer(serializers.ModelSerializer):

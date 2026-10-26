@@ -140,7 +140,10 @@ const BookDetails = () => {
 
     setSubmittingReview(true);
     try {
-      await bookService.addReview(id, { rating, comment: reviewText });
+      await bookService.addReview(id, {
+        score: rating,
+        review: reviewText,
+      });
       toast.success('Review added successfully!');
       setReviewText('');
       setRating(5);
