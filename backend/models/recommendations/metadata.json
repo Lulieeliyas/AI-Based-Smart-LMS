@@ -1,11 +1,11 @@
 {
   "version": "2.0.0",
-  "trained_at": "2026-10-28T22:03:24.891626+00:00",
+  "trained_at": "2026-10-28T22:15:29.100595+00:00",
   "training_duration_seconds": 0.03,
   "catalog_size": 51,
   "ratings_count": 1,
   "borrows_count": 0,
-  "interactions_count": 40,
+  "interactions_count": 43,
   "content_model": {
     "vectorizer_max_features": 5000,
     "ngram_range": [
@@ -24,12 +24,5 @@
     "content_weight": 0.4,
     "collab_weight": 0.4,
     "popularity_weight": 0.2
-  },
-  "evaluation": {
-    "evaluated_users": 3,
-    "precision_at_k": 0.2,
-    "recall_at_k": 1.0,
-    "ndcg_at_k": 0.4828,
-    "catalog_coverage": 0.1176
   }
 }
