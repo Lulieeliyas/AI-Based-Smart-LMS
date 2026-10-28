@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -23,7 +24,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 # If ALLOWED_HOSTS is not in .env, it uses the default list below
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS', 
-    'localhost,127.0.0.1,ai-library-backend-u07r.onrender.com,ai-based-smart-lms.vercel.app'
+    'localhost,127.0.0.1,testserver,ai-library-backend-u07r.onrender.com,ai-based-smart-lms.vercel.app'
 ).split(',')
 
 # Application definition
@@ -85,7 +86,16 @@ WSGI_APPLICATION = 'library_backend.wsgi.application'
 # ============ DATABASE CONFIGURATION ============
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL:
+if "test" in sys.argv:
+    # Use SQLite for automated unit testing to avoid requiring MySQL CREATE DATABASE privileges
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+    AI_MODEL_PATH = BASE_DIR / 'models' / 'test_recommendations'
+elif DATABASE_URL:
     # Render PostgreSQL
     DATABASES = {
         "default": dj_database_url.parse(
@@ -272,8 +282,9 @@ LOGGING = {
 
 # AI Recommendation Settings
 AI_MODEL_PATH = BASE_DIR / 'models' / 'recommendations'
-AI_CONTENT_WEIGHT = 0.6 
-AI_COLLAB_WEIGHT = 0.4   
+AI_CONTENT_WEIGHT = float(os.getenv('AI_CONTENT_WEIGHT', '0.40'))
+AI_COLLAB_WEIGHT = float(os.getenv('AI_COLLAB_WEIGHT', '0.40'))
+AI_POPULARITY_WEIGHT = float(os.getenv('AI_POPULARITY_WEIGHT', '0.20'))
 AI_MIN_USER_ACTIVITIES = 5  
 AI_RECOMMENDATION_LIMIT = 10  
 AI_SIMILARITY_THRESHOLD = 0.3  

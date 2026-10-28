@@ -1,4 +1,3 @@
-
 from django.urls import path
 
 from .views import (
@@ -9,6 +8,7 @@ from .views import (
     TrendingBooksView,
     RecordActivityView,
     UserActivitiesView,
+    ModelStatusView,
 )
 
 urlpatterns = [
@@ -20,4 +20,5 @@ urlpatterns = [
     path("activity/", RecordActivityView.as_view(), name="rec-activity"),
     path("activities/", UserActivitiesView.as_view(), name="rec-activities"),
     path("generate/", RecommendationsView.as_view(), name="rec-generate"),
+    path("status/", ModelStatusView.as_view(), name="rec-status"),
 ]
