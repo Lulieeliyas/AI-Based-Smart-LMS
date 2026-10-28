@@ -230,7 +230,7 @@ const PublicDashboard = () => {
                   <p className="mb-1"><strong>Team:</strong></p>
                   <ul className="mb-0">
                     {documentation.about?.team?.map((m, i) => (
-                      <li key={i}>{m.name} ({m.id})</li>
+                      <li key={i}>{m.name}</li>
                     ))}
                   </ul>
                 </div>

@@ -29,6 +29,7 @@ class DigitalResource(models.Model):
         ('audio', 'Audio'),
         ('youtube', 'YouTube Video'),
         ('external_link', 'External Link'),
+        ('electronic_device', 'Electronic Device / Hardware'),
         ('other', 'Other'),
     )
 

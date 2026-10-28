@@ -1,8 +1,3 @@
-
-/**
- * Detect the actual type of a file from its extension and MIME.
- * Returns: 'video' | 'audio' | 'pdf' | 'image' | 'epub' | 'office' | 'text' | 'archive' | 'other'
- */
 export const detectFileType = (file) => {
   if (!file) return 'other';
 
@@ -36,10 +31,6 @@ export const detectFileType = (file) => {
   return 'other';
 };
 
-/**
- * Extract duration from a video/audio File in the browser.
- * Resolves to { duration: 'M:SS', seconds: number }.
- */
 export const extractMediaDuration = (file) => {
   return new Promise((resolve) => {
     if (!file) {
@@ -79,9 +70,6 @@ export const extractMediaDuration = (file) => {
   });
 };
 
-/**
- * Format seconds → "M:SS" or "H:MM:SS".
- */
 export const formatDuration = (seconds) => {
   if (!seconds || !isFinite(seconds)) return '';
   const s = Math.floor(seconds);
@@ -95,9 +83,7 @@ export const formatDuration = (seconds) => {
   return `${m}:${String(sec).padStart(2, '0')}`;
 };
 
-/**
- * Map a detected type → the resource_type value the backend expects.
- */
+
 export const mapToResourceType = (detectedType) => {
   const map = {
     video: 'video',
@@ -108,16 +94,19 @@ export const mapToResourceType = (detectedType) => {
     office: 'presentation',
     text: 'other',
     archive: 'other',
+    electronic_device: 'electronic_device',
+    device: 'electronic_device',
     other: 'other',
   };
   return map[detectedType] || 'other';
 };
 
-/**
- * Emoji icon for a detected file type.
- */
+
 export const getTypeIcon = (detectedType) => {
   const icons = {
+    electronic_device: '🔌',
+    device: '🔌',
+    hardware: '🔌',
     video: '🎥',
     audio: '🎵',
     pdf: '📄',
@@ -131,16 +120,16 @@ export const getTypeIcon = (detectedType) => {
   return icons[detectedType] || '📁';
 };
 
-/**
- * Detect actual type from a URL (file extension).
- */
+
 export const detectUrlType = (fileUrl, declaredType) => {
   if (!fileUrl) {
     if (declaredType === 'youtube') return 'youtube';
     if (declaredType === 'external_link' || declaredType === 'external') return 'external';
+    if (declaredType === 'electronic_device') return 'electronic_device';
     return 'other';
   }
   const lower = fileUrl.toLowerCase();
+  if (declaredType === 'electronic_device') return 'electronic_device';
   if (/\.(mp4|webm|ogg|mov|mkv|m4v)$/.test(lower)) return 'video';
   if (/\.(mp3|wav|m4a|aac|ogg|flac|opus)$/.test(lower)) return 'audio';
   if (lower.endsWith('.pdf')) return 'pdf';
@@ -151,9 +140,7 @@ export const detectUrlType = (fileUrl, declaredType) => {
   return 'other';
 };
 
-/**
- * Extract YouTube ID from any YouTube URL.
- */
+
 export const extractYouTubeId = (url) => {
   if (!url) return null;
   const patterns = [
@@ -165,4 +152,133 @@ export const extractYouTubeId = (url) => {
     if (m) return m[1];
   }
   return null;
+};
+
+
+export const resolveResourceType = (resource) => {
+  if (!resource) return 'other';
+
+  const declared = String(resource.resource_type || '').toLowerCase();
+
+  // Trust explicit, meaningful declared types
+  const trusted = [
+    'electronic_device',
+    'ebook',
+    'pdf',
+    'journal',
+    'research_paper',
+    'presentation',
+    'video',
+    'audio',
+    'youtube',
+    'external_link',
+  ];
+  if (trusted.includes(declared)) return declared;
+
+  // Otherwise infer from the file / display URL
+  const rawUrl =
+    resource.file_url ||
+    resource.file ||
+    resource.display_url ||
+    resource.external_url ||
+    '';
+
+  // detectUrlType returns 'epub' / 'office' etc.; map back to backend types
+  const detected = detectUrlType(rawUrl, declared);
+  const remap = {
+    epub: 'ebook',
+    office: 'presentation',
+    image: 'other',
+    text: 'other',
+    archive: 'other',
+    external: 'external_link',
+    electronic_device: 'electronic_device',
+    youtube: 'youtube',
+    video: 'video',
+    audio: 'audio',
+    pdf: 'pdf',
+    other: declared || 'other',
+  };
+  return remap[detected] || declared || 'other';
+};
+
+/** Big emoji icon for a resource (accepts resource object OR type string). */
+export const getResourceIcon = (resourceOrType) => {
+  const type =
+    typeof resourceOrType === 'string'
+      ? resourceOrType
+      : resolveResourceType(resourceOrType);
+  return getTypeIcon(type);
+};
+
+/** Friendly display label for a resource type. */
+export const getResourceTypeLabel = (resourceOrType) => {
+  const type =
+    typeof resourceOrType === 'string'
+      ? resourceOrType
+      : resolveResourceType(resourceOrType);
+
+  const labels = {
+    electronic_device: 'Electronic Device',
+    ebook: 'E-Book',
+    pdf: 'PDF Document',
+    journal: 'Journal Article',
+    research_paper: 'Research Paper',
+    presentation: 'Presentation',
+    video: 'Video',
+    audio: 'Audio Track',
+    youtube: 'YouTube Video',
+    external_link: 'External Link',
+    image: 'Image',
+    other: 'File',
+  };
+  return labels[type] || 'Resource';
+};
+
+/** Primary action verb ("Watch", "Listen", "Read", "Inspect", ...). */
+export const getResourceActionVerb = (resourceOrType) => {
+  const type =
+    typeof resourceOrType === 'string'
+      ? resourceOrType
+      : resolveResourceType(resourceOrType);
+
+  const verbs = {
+    electronic_device: 'Inspect',
+    ebook: 'Read',
+    pdf: 'Read',
+    journal: 'Read',
+    research_paper: 'Read',
+    presentation: 'View',
+    video: 'Watch',
+    audio: 'Listen',
+    youtube: 'Watch',
+    external_link: 'Open',
+    image: 'View',
+    other: 'View',
+  };
+  return verbs[type] || 'View';
+};
+
+/** Accent tone used by the UI chip / icon background. */
+export const getResourceTone = (resourceOrType) => {
+  const type =
+    typeof resourceOrType === 'string'
+      ? resourceOrType
+      : resolveResourceType(resourceOrType);
+
+  const tones = {
+    electronic_device: 'cyan',
+    ebook: 'violet',
+    pdf: 'rose',
+    journal: 'amber',
+    research_paper: 'amber',
+    presentation: 'orange',
+    video: 'red',
+    audio: 'pink',
+    youtube: 'red',
+    external_link: 'blue',
+    image: 'emerald',
+    other: 'slate',
+  };
+  return tones[type] || 'slate';
 };

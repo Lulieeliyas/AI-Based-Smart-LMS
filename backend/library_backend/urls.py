@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/borrowing/', include('apps.borrowing.urls')),
     path('api/recommendations/', include('apps.ai_recommendations.urls')),
     path('api/digital/', include('apps.digital_resources.urls')),
+    path("api/digital-resources/", include("apps.digital_resources.urls")),
     path('api/reports/', include('apps.reports.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     # Swagger/API Documentation

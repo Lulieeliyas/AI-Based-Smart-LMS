@@ -26,3 +26,34 @@
 footer {
   margin-top: auto;
 }
+
+
+:root {
+  --app-navbar-height: 62px;   /* desktop */
+}
+
+body {
+  padding-top: var(--app-navbar-height);
+}
+
+/* Bootstrap navbar height varies a bit — tune per breakpoint */
+@media (max-width: 991.98px) {
+  :root { --app-navbar-height: 58px; }
+}
+@media (max-width: 575.98px) {
+  :root { --app-navbar-height: 56px; }
+}
+
+/* Optional: nice stacking context + never hide on scroll */
+.app-navbar {
+  z-index: 1030;                /* above page content, below modals */
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Prevent the navbar dropdown from being clipped */
+.app-navbar .dropdown-menu {
+  z-index: 1055;
+}

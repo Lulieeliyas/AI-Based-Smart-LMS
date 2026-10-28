@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import digitalService from '../../services/digitalService';
+import digitalService, { toAbsoluteUrl } from '../../services/digitalService';
 import ResourceViewer from './ResourceViewer';
 import {
   detectFileType,
@@ -13,13 +13,14 @@ import {
 
 const EMPTY_FORM = {
   title: '',
-  resource_type: 'other',
+  resource_type: 'electronic_device',
   source_type: 'file',
   description: '',
   keywords: '',
   category: '',
   book: '',
   file: null,
+  thumbnail: null,
   external_url: '',
   duration: '',
   access_level: 'public',
@@ -63,6 +64,7 @@ const DigitalResources = () => {
   // Return allowed file extensions for a given resource_type
   const getAcceptTypes = (resourceType) => {
     const map = {
+      electronic_device: '*/*',
       ebook: '.pdf,.epub,.mobi',
       pdf: '.pdf',
       journal: '.pdf,.doc,.docx',
@@ -97,6 +99,7 @@ const DigitalResources = () => {
       ];
     }
     return [
+      { value: 'electronic_device', label: '🔌 Electronic Device / Hardware' },
       { value: 'ebook', label: '📚 E-Book' },
       { value: 'pdf', label: '📄 PDF Document' },
       { value: 'journal', label: '📓 Journal Article' },
@@ -160,6 +163,10 @@ const DigitalResources = () => {
     if (type === 'file') {
       const file = files[0];
       setFormData((prev) => ({ ...prev, [name]: file }));
+
+      if (name === 'thumbnail') {
+        return;
+      }
 
       if (file) {
         const detected = detectFileType(file);
@@ -246,9 +253,10 @@ const DigitalResources = () => {
       if (
         formData.source_type === 'file' &&
         !formData.file &&
+        !(formData.resource_type === 'electronic_device' && formData.thumbnail) &&
         !editingResource
       ) {
-        throw new Error('Please select a file to upload.');
+        throw new Error('Please select a file or device photo to upload.');
       }
       if (
         (formData.source_type === 'youtube' ||
@@ -262,7 +270,7 @@ const DigitalResources = () => {
 
       Object.entries(formData).forEach(([key, value]) => {
         if (value === null || value === undefined || value === '') return;
-        if (key === 'file' && !(value instanceof File)) return;
+        if ((key === 'file' || key === 'thumbnail') && !(value instanceof File)) return;
         payload.append(key, value);
       });
 
@@ -321,6 +329,7 @@ const DigitalResources = () => {
       category: resource.category || '',
       book: resource.book || '',
       file: null,
+      thumbnail: null,
       external_url: resource.external_url || '',
       duration: resource.duration || '',
       access_level: resource.access_level || 'public',
@@ -429,6 +438,7 @@ const DigitalResources = () => {
 
   const getResourceIcon = (type) => {
     const icons = {
+      electronic_device: '🔌',
       ebook: '📚',
       pdf: '📄',
       journal: '📓',
@@ -445,6 +455,8 @@ const DigitalResources = () => {
 
   const getActionLabel = (resource) => {
     switch (resource.resource_type) {
+      case 'electronic_device':
+        return '🔌 View Device & Contents';
       case 'video':
       case 'youtube':
         return '▶ Watch';
@@ -669,7 +681,29 @@ const DigitalResources = () => {
                 <>
                   <div className="mb-3">
                     <label className="form-label">
-                      File <span className="text-danger">*</span>
+                      {formData.resource_type === 'electronic_device'
+                        ? '🔌 Device Photo / Hardware Image'
+                        : 'Cover / Thumbnail Image'}
+                    </label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      name="thumbnail"
+                      accept="image/*"
+                      onChange={handleChange}
+                    />
+                    <small className="text-muted">
+                      {formData.resource_type === 'electronic_device'
+                        ? 'Upload a photo of the electronic hardware or device'
+                        : 'Optional image thumbnail'}
+                    </small>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">
+                      {formData.resource_type === 'electronic_device'
+                        ? 'Device Documentation / Manual / Firmware File'
+                        : 'File'} <span className="text-danger">*</span>
                     </label>
                     <input
                       type="file"
@@ -996,6 +1030,7 @@ const DigitalResources = () => {
             onChange={(e) => setFilterType(e.target.value)}
           >
             <option value="all">All Types</option>
+            <option value="electronic_device">🔌 Electronic Devices</option>
             <option value="ebook">E-Book</option>
             <option value="pdf">PDF</option>
             <option value="journal">Journal</option>
@@ -1030,6 +1065,46 @@ const DigitalResources = () => {
             <div key={resource.id} className="col-md-4 mb-3">
               <div className="card h-100 shadow-sm">
                 <div className="card-body">
+                  {/* Device Photo / Thumbnail */}
+                  {(resource.thumbnail_url || resource.thumbnail) ? (
+                    <div
+                      style={{
+                        height: "170px",
+                        overflow: "hidden",
+                        borderRadius: "8px",
+                        background: "#f8fafc",
+                        marginBottom: "12px",
+                        border: "1px solid #e2e8f0",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <img
+                        src={toAbsoluteUrl(resource.thumbnail_url || resource.thumbnail)}
+                        alt={resource.title}
+                        style={{ maxWidth: "100%", maxHeight: "170px", objectFit: "contain" }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  ) : resource.resource_type === 'electronic_device' ? (
+                    <div
+                      style={{
+                        height: "100px",
+                        borderRadius: "8px",
+                        background: "#e0f2fe",
+                        marginBottom: "12px",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#0369a1",
+                        fontSize: "40px",
+                      }}
+                    >
+                      🔌
+                    </div>
+                  ) : null}
+
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <h5 className="card-title mb-0">
                       {getResourceIcon(resource.resource_type)}{' '}
@@ -1075,22 +1150,42 @@ const DigitalResources = () => {
                     </span>
                   </div>
 
-                  <div className="d-flex flex-wrap gap-2">
-                    {/* ✅ VIEW */}
+                  <div className="d-flex flex-wrap gap-2 align-items-center">
+                    {/* Attractive View Button */}
                     <button
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-primary btn-sm rounded-pill px-3 shadow-sm d-inline-flex align-items-center gap-1 fw-bold"
                       onClick={() => handleView(resource)}
                     >
                       {getActionLabel(resource)}
                     </button>
 
+                    {/* Quick Favorite Star Button */}
+                    <button
+                      type="button"
+                      className="btn btn-outline-warning btn-sm rounded-pill px-2"
+                      title="Set as Favorite"
+                      onClick={() => {
+                        try {
+                          const favs = JSON.parse(localStorage.getItem("library_favorites") || "[]");
+                          const exists = favs.includes(resource.id);
+                          const updated = exists ? favs.filter(id => id !== resource.id) : [...favs, resource.id];
+                          localStorage.setItem("library_favorites", JSON.stringify(updated));
+                          toast.info(exists ? "Removed from favorites" : "Saved as Favorite! ⭐");
+                          setResources(r => [...r]);
+                        } catch {}
+                      }}
+                    >
+                      {JSON.parse(localStorage.getItem("library_favorites") || "[]").includes(resource.id) ? "⭐" : "🤍"}
+                    </button>
+
                     {isOfficer && (
                       <>
                         <button
-                          className="btn btn-outline-primary btn-sm"
+                          className="btn btn-outline-secondary btn-sm rounded-pill px-2 fw-semibold"
                           onClick={() => handleEdit(resource)}
+                          title="Edit Details"
                         >
-                          <i className="bi bi-pencil"></i>
+                          <i className="bi bi-pencil me-1"></i>Edit
                         </button>
 
                         {resource.quality_status !== 'verified' && (
@@ -1139,6 +1234,8 @@ const DigitalResources = () => {
       {viewingResource && (
         <ResourceViewer
           resource={viewingResource}
+          resources={filteredResources}
+          onSelectResource={(r) => setViewingResource(r)}
           onClose={() => setViewingResource(null)}
           onDownload={handleDownload}
         />

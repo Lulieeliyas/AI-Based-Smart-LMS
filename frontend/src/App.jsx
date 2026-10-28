@@ -35,6 +35,7 @@ import Recommendations from './components/recommendations/Recommendations';
 
 // Digital Resources
 import DigitalResources from './components/digital/DigitalResources';
+import DigitalOfficerDashboard from"./pages/digital-officer/DigitalOfficerDashboard";
 
 // Reports
 import Reports from './components/reports/Reports';
@@ -95,14 +96,25 @@ function App() {
                 </ProtectedRoute>
               }
             />
-  <Route
+  {/* <Route
     path="/digital-officer/dashboard"
     element={
       <ProtectedRoute allowedRoles={['digital_officer', 'admin']}>
         <Dashboard />
       </ProtectedRoute>
     }
+  /> */}
+
+  <Route
+    path="/digital-officer/dashboard"
+    element={
+      <ProtectedRoute allowedRoles={['digital_officer', 'librarian', 'admin']}>
+        <DigitalOfficerDashboard />
+      </ProtectedRoute>
+    }
   />
+
+  
             <Route
               path="/staff/dashboard"
               element={

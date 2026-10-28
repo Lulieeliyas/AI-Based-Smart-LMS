@@ -13,10 +13,10 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  // ✅ Logged-out navbar: brand + Login + Register
+  // Logged-out navbar
   if (!isAuthenticated || !user) {
     return (
-      <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top app-navbar">
         <div className="container">
           <Link className="navbar-brand d-flex align-items-center" to="/">
             <span style={{ fontSize: '1.5rem' }}>📚</span>
@@ -31,9 +31,9 @@ const Navbar = () => {
     );
   }
 
-  // ✅ Logged-in navbar
+  // Logged-in navbar
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top app-navbar">
       <div className="container">
         <Link className="navbar-brand d-flex align-items-center" to="/">
           <span style={{ fontSize: '1.5rem' }}>📚</span>
@@ -60,12 +60,19 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
-            </li>
-            <li className="nav-item">
               <Link className="nav-link" to="/digital">
                 <i className="bi bi-cloud-arrow-down me-1"></i>Digital
               </Link>
             </li>
+            {(user?.role === 'digital_officer' ||
+              user?.role === 'admin' ||
+              user?.role === 'librarian') && (
+              <li className="nav-item">
+                <Link className="nav-link" to="/digital-officer/dashboard">
+                  <i className="bi bi-cpu me-1"></i>Digital Management
+                </Link>
+              </li>
+            )}
             {user?.role === 'admin' && (
               <li className="nav-item">
                 <Link className="nav-link" to="/users">
@@ -83,15 +90,35 @@ const Navbar = () => {
                 aria-expanded="false"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
-                <i className="bi bi-person-circle me-1" style={{ fontSize: '1.2rem' }}></i>
+                <i
+                  className="bi bi-person-circle me-1"
+                  style={{ fontSize: '1.2rem' }}
+                ></i>
                 <span>{user?.first_name || user?.username}</span>
               </button>
-              <ul className={`dropdown-menu dropdown-menu-end ${dropdownOpen ? 'show' : ''}`}>
+              <ul
+                className={`dropdown-menu dropdown-menu-end ${
+                  dropdownOpen ? 'show' : ''
+                }`}
+              >
                 <li>
                   <Link className="dropdown-item" to="/profile">
                     <i className="bi bi-person me-2"></i>Profile
                   </Link>
                 </li>
+                {(user?.role === 'digital_officer' ||
+                  user?.role === 'admin' ||
+                  user?.role === 'librarian') && (
+                  <li>
+                    <Link
+                      className="dropdown-item"
+                      to="/digital-officer/dashboard"
+                    >
+                      <i className="bi bi-cpu me-2"></i>Digital & Devices
+                      Dashboard
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link className="dropdown-item" to="/notifications">
                     <i className="bi bi-bell me-2"></i>Notifications
@@ -104,7 +131,10 @@ const Navbar = () => {
                 </li>
                 <li><hr className="dropdown-divider" /></li>
                 <li>
-                  <button className="dropdown-item text-danger" onClick={handleLogout}>
+                  <button
+                    className="dropdown-item text-danger"
+                    onClick={handleLogout}
+                  >
                     <i className="bi bi-box-arrow-right me-2"></i>Logout
                   </button>
                 </li>
