@@ -76,7 +76,7 @@ cd AI-Based-Smart-LMS
    ```
 3. Initialize the development environment:
    ```bash
-   npm start
+   npm run dev
    ```
 
 ---
