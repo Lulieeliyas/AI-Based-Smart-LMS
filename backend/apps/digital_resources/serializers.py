@@ -32,6 +32,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "resource_count",
         ]
         read_only_fields = ["id", "created_at", "resource_count"]
+        ref_name = "DigitalResourceCategory"
 
     def get_resource_count(self, obj):
         return obj.resources.count()
