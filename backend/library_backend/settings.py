@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
+from decimal import Decimal
 
 # Load environment variables
 load_dotenv()
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'apps.digital_resources',
     'apps.reports',
     'apps.notifications',
+    'apps.fines',
 ]
 
 MIDDLEWARE = [
@@ -131,9 +133,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Addis_Ababa'
 USE_I18N = True
 USE_TZ = True
+
+# Borrowing and fine policies
+BORROW_DAYS_STUDENT = int(
+    os.getenv("STUDENT_BORROW_DAYS", os.getenv("BORROW_DAYS", "14"))
+)
+
+BORROW_DAYS_OTHER = int(
+    os.getenv("OTHER_BORROW_DAYS", "30")
+)
+
+# Keep the old setting for compatibility with existing code.
+BORROW_DAYS = BORROW_DAYS_STUDENT
+
+FINE_PER_DAY = Decimal(os.getenv("FINE_PER_DAY", "5"))
+FINE_CURRENCY = "ETB"
 
 # ==========================================
 # STATIC & MEDIA FILES
