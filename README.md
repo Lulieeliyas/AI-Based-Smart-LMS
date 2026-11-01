@@ -47,6 +47,7 @@ cd AI-Based-Smart-LMS
    python3 -m venv venv
    source venv/bin/activate # in Ubuntu
    venv\scripts\activate #in windows
+   
    ```
 3. Populate your application variables:
    ```bash
