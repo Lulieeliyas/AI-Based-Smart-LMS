@@ -1,8 +1,10 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
+from decimal import Decimal
 
 # Load environment variables
 load_dotenv()
@@ -23,7 +25,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 # If ALLOWED_HOSTS is not in .env, it uses the default list below
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS', 
-    'localhost,127.0.0.1,ai-library-backend-u07r.onrender.com,ai-based-smart-lms.vercel.app'
+    'localhost,127.0.0.1,testserver,ai-library-backend-u07r.onrender.com,ai-based-smart-lms.vercel.app'
 ).split(',')
 
 # Application definition
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     'apps.digital_resources',
     'apps.reports',
     'apps.notifications',
+    'apps.fines',
 ]
 
 MIDDLEWARE = [
@@ -85,7 +88,16 @@ WSGI_APPLICATION = 'library_backend.wsgi.application'
 # ============ DATABASE CONFIGURATION ============
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL:
+if "test" in sys.argv:
+    # Use SQLite for automated unit testing to avoid requiring MySQL CREATE DATABASE privileges
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
+    AI_MODEL_PATH = BASE_DIR / 'models' / 'test_recommendations'
+elif DATABASE_URL:
     # Render PostgreSQL
     DATABASES = {
         "default": dj_database_url.parse(
@@ -121,9 +133,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Addis_Ababa'
 USE_I18N = True
 USE_TZ = True
+
+# Borrowing and fine policies
+BORROW_DAYS_STUDENT = int(
+    os.getenv("STUDENT_BORROW_DAYS", os.getenv("BORROW_DAYS", "14"))
+)
+
+BORROW_DAYS_OTHER = int(
+    os.getenv("OTHER_BORROW_DAYS", "30")
+)
+
+# Keep the old setting for compatibility with existing code.
+BORROW_DAYS = BORROW_DAYS_STUDENT
+
+FINE_PER_DAY = Decimal(os.getenv("FINE_PER_DAY", "5"))
+FINE_CURRENCY = "ETB"
 
 # ==========================================
 # STATIC & MEDIA FILES
@@ -272,8 +299,9 @@ LOGGING = {
 
 # AI Recommendation Settings
 AI_MODEL_PATH = BASE_DIR / 'models' / 'recommendations'
-AI_CONTENT_WEIGHT = 0.6 
-AI_COLLAB_WEIGHT = 0.4   
+AI_CONTENT_WEIGHT = float(os.getenv('AI_CONTENT_WEIGHT', '0.40'))
+AI_COLLAB_WEIGHT = float(os.getenv('AI_COLLAB_WEIGHT', '0.40'))
+AI_POPULARITY_WEIGHT = float(os.getenv('AI_POPULARITY_WEIGHT', '0.20'))
 AI_MIN_USER_ACTIVITIES = 5  
 AI_RECOMMENDATION_LIMIT = 10  
 AI_SIMILARITY_THRESHOLD = 0.3  

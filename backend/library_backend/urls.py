@@ -33,9 +33,11 @@ urlpatterns = [
     path("api/digital-resources/", include("apps.digital_resources.urls")),
     path('api/reports/', include('apps.reports.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
+    path('api/fines/', include('apps.fines.urls')),
     # Swagger/API Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
 ]
 
 if settings.DEBUG:

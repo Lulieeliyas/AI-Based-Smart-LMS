@@ -1,8 +1,12 @@
 import apiClient from './apiClient';
 
 const recommendationService = {
-  getRecommendations: () => {
-    return apiClient.get('/recommendations/', { _silent: true });
+  getRecommendations: (params = {}) => {
+    return apiClient.get('/recommendations/', { params, _silent: true });
+  },
+
+  getPersonalizedRecommendations: (params = {}) => {
+    return apiClient.get('/recommendations/for-me/', { params, _silent: true });
   },
 
   generateRecommendations: () => {
@@ -30,15 +34,23 @@ const recommendationService = {
     });
   },
 
-  recordActivity: (bookId, activityType) => {
-    return apiClient.post('/recommendations/activity/', {
+  recordActivity: (bookId, activityType, rating = null) => {
+    const payload = {
       book_id: bookId,
       activity_type: activityType,
-    }, { _silent: true });
+    };
+    if (rating !== null) {
+      payload.rating = rating;
+    }
+    return apiClient.post('/recommendations/activity/', payload, { _silent: true });
   },
 
   getUserActivities: () => {
     return apiClient.get('/recommendations/activities/', { _silent: true });
+  },
+
+  getModelStatus: () => {
+    return apiClient.get('/recommendations/status/', { _silent: true });
   },
 };
 

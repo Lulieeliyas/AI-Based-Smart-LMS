@@ -1,85 +1,37 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
+import logging
+from typing import List, Dict, Any
+from .content_based import content_recommender
+from .hybrid import hybrid_recommender
 from apps.books.models import Book
+
+logger = logging.getLogger(__name__)
 
 
 class BookRecommender:
     """
-    Content-based book recommendation engine.
-
-    Uses book metadata to determine which books are
-    most similar to a selected book.
+    High-performance recommendation facade for backward compatibility.
+    Uses precomputed TF-IDF matrix and cached model artifacts.
     """
 
     def __init__(self):
-        self.books = list(
-            Book.objects.all().select_related("category")
-        )
+        content_recommender.ensure_ready()
+        self.recommender = content_recommender
 
-        self.documents = [
-            self._build_document(book)
-            for book in self.books
-        ]
-
-        self.vectorizer = TfidfVectorizer(
-            stop_words="english"
-        )
-
-        self.matrix = self.vectorizer.fit_transform(
-            self.documents
-        )
-
-    def _build_document(self, book):
-        category = (
-            book.category.name
-            if book.category
-            else ""
-        )
-
-        return " ".join([
-            book.title or "",
-            book.author or "",
-            category,
-            book.publisher or "",
-            book.description or "",
-        ])
-
-    def recommend(self, book_id, limit=5):
+    def recommend(self, book_id: int, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Return books most similar to the selected book.
         """
+        results = self.recommender.get_similar_books(book_id=book_id, top_n=limit)
+        book_ids = [r["book_id"] for r in results]
+        books_map = {b.id: b for b in Book.objects.filter(id__in=book_ids).select_related("category")}
 
-        target_index = None
-
-        for index, book in enumerate(self.books):
-            if book.id == book_id:
-                target_index = index
-                break
-
-        if target_index is None:
-            return []
-
-        similarities = cosine_similarity(
-            self.matrix[target_index],
-            self.matrix,
-        ).flatten()
-
-        ranked_indices = similarities.argsort()[::-1]
-
-        recommendations = []
-
-        for index in ranked_indices:
-            # Don't recommend the book itself.
-            if index == target_index:
-                continue
-
-            recommendations.append({
-                "book": self.books[index],
-                "score": float(similarities[index]),
-            })
-
-            if len(recommendations) >= limit:
-                break
-
-        return recommendations
+        formatted = []
+        for r in results:
+            b = books_map.get(r["book_id"])
+            if b:
+                formatted.append({
+                    "book": b,
+                    "score": r["score"],
+                    "reason": r["reason"],
+                })
+        return formatted

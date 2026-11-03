@@ -20,7 +20,12 @@ class BookListCreateView(generics.ListCreateAPIView):
     - GET: List all books with filters and search
     - POST: Create a new book (Librarian/Admin only)
     """
-    queryset = Book.objects.all()
+    # Base queryset includes all books; we'll filter in get_queryset based on authentication
+    def get_queryset(self):
+        qs = Book.objects.all()
+        if self.request.user.is_anonymous:
+            qs = qs.filter(access_type=Book.AccessType.PUBLIC)
+        return qs
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'author', 'isbn', 'publisher', 'description']
@@ -44,19 +49,26 @@ class BookDetailView(generics.RetrieveUpdateDestroyAPIView):
     - PUT/PATCH: Update book (Librarian/Admin only)
     - DELETE: Delete book (Librarian/Admin only)
     """
-    queryset = Book.objects.all()
+    # Base queryset includes all books; we'll filter in get_queryset based on authentication
+    def get_queryset(self):
+        qs = Book.objects.all()
+        if self.request.user.is_anonymous:
+            qs = qs.filter(access_type=Book.AccessType.PUBLIC)
+        return qs
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        - Anyone authenticated can view (GET)
-        - Only librarians and admins can update (PUT, PATCH) or delete (DELETE)
-        """
         if self.request.method in ['PUT', 'PATCH', 'DELETE']:
             return [IsAuthenticated(), IsLibrarianUser()]
-        return [IsAuthenticated()]
+        return [IsAuthenticatedOrReadOnly()]
+
+    def get_object(self):
+        obj = super().get_object()
+        if self.request.user.is_anonymous and obj.is_private:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Private book cannot be accessed by anonymous users.")
+        return obj
 
     def perform_update(self, serializer):
         """Save the book with updated information."""
@@ -75,7 +87,12 @@ class BookSearchView(generics.ListAPIView):
         category = self.request.query_params.get('category', '')
         author = self.request.query_params.get('author', '')
         
-        queryset = Book.objects.all()
+        # Base queryset includes all books; we'll filter in get_queryset based on authentication
+    def get_queryset(self):
+        qs = Book.objects.all()
+        if self.request.user.is_anonymous:
+            qs = qs.filter(access_type=Book.AccessType.PUBLIC)
+        return qs
         
         if query:
             queryset = queryset.filter(

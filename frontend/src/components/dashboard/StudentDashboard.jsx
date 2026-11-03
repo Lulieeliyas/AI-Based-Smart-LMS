@@ -278,9 +278,9 @@ const StudentDashboard = () => {
           <div className="card shadow-sm">
             <div className="card-header bg-white d-flex justify-content-between align-items-center">
               <h5 className="mb-0">📚 Recommended for You</h5>
-              {/* <Link to="/recommendations" className="btn btn-sm btn-outline-primary">
+              <Link to="/recommendations" className="btn btn-sm btn-outline-primary">
                 View All
-              </Link> */}
+              </Link>
             </div>
             <div className="card-body">
               {recommendations.length > 0 ? (
@@ -288,27 +288,34 @@ const StudentDashboard = () => {
                   {recommendations.map((rec) => (
                     <div key={rec.id || rec.book?.id} className="col-md-3 col-sm-6 mb-3">
                       <div className="card h-100 shadow-sm card-hover">
-                        <div className="card-body">
+                        <div className="card-body d-flex flex-column">
                           <div className="text-center mb-2" style={{ fontSize: '2.5rem' }}>
                             📖
                           </div>
-                          <h6 className="card-title text-truncate">
+                          <h6 className="card-title text-truncate fw-bold" title={rec.book?.title || rec.title}>
                             {rec.book?.title || rec.title || 'Unknown Book'}
                           </h6>
-                          <p className="card-text text-muted small">
+                          <p className="card-text text-muted small mb-1 text-truncate">
                             {rec.book?.author || rec.author || 'Unknown Author'}
                           </p>
-                          {rec.score && (
-                            <span className="badge bg-info">
-                              Match: {(rec.score * 100).toFixed(0)}%
-                            </span>
+                          {rec.reason && (
+                            <p className="card-text small text-secondary fst-italic mb-2 text-truncate" title={rec.reason} style={{ fontSize: '0.75rem' }}>
+                              💡 {rec.reason}
+                            </p>
                           )}
-                          <Link
-                            to={`/books/${rec.book?.id || rec.id}`}
-                            className="btn btn-sm btn-outline-primary w-100 mt-2"
-                          >
-                            View Book
-                          </Link>
+                          <div className="mt-auto">
+                            {rec.score && (
+                              <span className="badge bg-info mb-2">
+                                Match: {(rec.score * 100).toFixed(0)}%
+                              </span>
+                            )}
+                            <Link
+                              to={`/books/${rec.book?.id || rec.id}`}
+                              className="btn btn-sm btn-outline-primary w-100"
+                            >
+                              View Book
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </div>
