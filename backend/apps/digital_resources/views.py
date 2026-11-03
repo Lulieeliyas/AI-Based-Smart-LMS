@@ -1,5 +1,3 @@
-# backend/apps/digital_resources/views.py
-
 import os
 import mimetypes
 

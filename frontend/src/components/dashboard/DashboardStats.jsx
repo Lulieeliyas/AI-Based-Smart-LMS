@@ -1,6 +1,7 @@
 import React from 'react';
 
 const DashboardStats = ({ stats }) => {
+  // Loading state
   if (!stats) {
     return (
       <div className="row g-3">
@@ -17,28 +18,29 @@ const DashboardStats = ({ stats }) => {
     );
   }
 
+  // Map the real data to the cards
   const statCards = [
     {
       label: 'Total Borrowed',
-      value: stats.total_borrowings || 0,
+      value: stats.totalBorrowings || 0,
       icon: '📚',
       color: 'primary'
     },
     {
       label: 'Active',
-      value: stats.active_borrowings || 0,
+      value: stats.borrowedBooks || 0,
       icon: '📖',
       color: 'success'
     },
     {
       label: 'Overdue',
-      value: stats.overdue_borrowings || 0,
+      value: stats.overdueBooks || 0,
       icon: '⚠️',
       color: 'danger'
     },
     {
       label: 'Returned',
-      value: stats.returned_borrowings || 0,
+      value: stats.returnedBorrowings || 0,
       icon: '✅',
       color: 'info'
     }
@@ -49,7 +51,7 @@ const DashboardStats = ({ stats }) => {
       {statCards.map((stat, index) => (
         <div key={index} className="col-md-3 col-6">
           <div className={`card bg-${stat.color} text-white h-100`}>
-            <div className="card-body text-center">
+            <div className="card-body text-center py-3">
               <div style={{ fontSize: '2rem' }}>{stat.icon}</div>
               <h3 className="mb-0">{stat.value}</h3>
               <small>{stat.label}</small>
@@ -58,13 +60,12 @@ const DashboardStats = ({ stats }) => {
         </div>
       ))}
       
-      {/* Fine Amount */}
+      {/* Fine Amount Alert */}
       {stats.total_fines > 0 && (
         <div className="col-12 mt-2">
           <div className="alert alert-warning mb-0">
             <i className="bi bi-exclamation-triangle me-2"></i>
             <strong>Outstanding Fine:</strong> ${stats.total_fines}
-            <span className="ms-2">Please clear your fines to continue borrowing.</span>
           </div>
         </div>
       )}

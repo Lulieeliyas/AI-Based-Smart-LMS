@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ Added for the Back button
 import digitalService, { toAbsoluteUrl } from "../../services/digitalService";
 import ResourceViewer from "../../components/digital/ResourceViewer";
 import {
@@ -73,6 +74,8 @@ const errorText = (error) => {
 };
 
 export default function DigitalOfficerDashboard() {
+  const navigate = useNavigate(); // ✅ Navigation hook
+
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
@@ -357,53 +360,24 @@ export default function DigitalOfficerDashboard() {
   );
 
   return (
-    <main className="dr-shell">
-      {/* Sidebar */}
-      <aside className="dr-sidebar">
-        <div className="dr-brand">
-          <span className="dr-brand-icon">D</span>
-          <span>
-            Digital<span className="dr-brand-light">Library</span>
-          </span>
-        </div>
-        <div className="dr-nav-label">WORKSPACE</div>
-        <a className="dr-nav active" href="#overview">
-          <span>◫</span> Overview
-        </a>
-        <a className="dr-nav" href="#resources">
-          <span>▤</span> Resources & Devices
-        </a>
-        <button
-          className="dr-nav dr-nav-button"
-          type="button"
-          onClick={() => {
-            setFormOpen(true);
-            setTimeout(
-              () =>
-                document
-                  .getElementById("editor")
-                  ?.scrollIntoView({ behavior: "smooth" }),
-              50
-            );
-          }}
-        >
-          <span>＋</span> Add resource / device
-        </button>
-        <div className="dr-side-bottom">
-          <div className="dr-avatar">DO</div>
-          <div>
-            <strong>Library Officer</strong>
-            <small>Content administrator</small>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
+    // ✅ Changed to dr-shell-full to remove flex side-by-side layout
+    <main className="dr-shell-full">
       <section className="dr-main" id="overview">
         <header className="dr-topbar">
-          <div className="dr-crumb">
-            Workspace <span>/</span> Digital library & Electronic devices
+          {/* ✅ Added Back button and grouped it with breadcrumbs */}
+          <div className="d-flex align-items-center gap-3">
+            <button
+              className="dr-button dr-button-plain"
+              onClick={() => navigate(-1)}
+              title="Go back"
+            >
+              ← Back
+            </button>
+            <div className="dr-crumb">
+              Workspace <span>/</span> Digital library & Electronic devices
+            </div>
           </div>
+
           <button
             className="dr-button dr-button-primary"
             onClick={() => {
@@ -433,10 +407,7 @@ export default function DigitalOfficerDashboard() {
                 digital materials.
               </p>
             </div>
-            <button
-              className="dr-button dr-button-plain"
-              onClick={addCategory}
-            >
+            <button className="dr-button dr-button-plain" onClick={addCategory}>
               ＋ New category
             </button>
           </div>
@@ -785,9 +756,7 @@ export default function DigitalOfficerDashboard() {
                   publish items.
                 </p>
               </div>
-              <span className="dr-count">
-                {visibleResources.length} shown
-              </span>
+              <span className="dr-count">{visibleResources.length} shown</span>
             </div>
 
             {/* Category Filter Pills */}

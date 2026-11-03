@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import RoleDashboard from './components/common/RoleDashboard'; // ✅ Added
 
 // Auth Pages
 import Login from './components/auth/Login';
@@ -19,8 +20,11 @@ import AccountCreatedSuccess from './components/auth/AccountCreatedSuccess';
 
 // Dashboard
 import Dashboard from './components/dashboard/Dashboard';
+import AdminDashboard from './components/dashboard/AdminDashboard';
 import StudentDashboard from './components/dashboard/StudentDashboard';
 import LibrarianDashboard from './components/dashboard/LibrarianDashboard';
+import DigitalOfficerDashboard from './pages/digital-officer/DigitalOfficerDashboard';
+
 // Books
 import BookList from './components/books/BookList';
 import BookDetails from './components/books/BookDetails';
@@ -35,7 +39,6 @@ import Recommendations from './components/recommendations/Recommendations';
 
 // Digital Resources
 import DigitalResources from './components/digital/DigitalResources';
-import DigitalOfficerDashboard from"./pages/digital-officer/DigitalOfficerDashboard";
 
 // Reports
 import Reports from './components/reports/Reports';
@@ -64,7 +67,8 @@ function App() {
         <Navbar />
         <div className="container flex-grow-1 mt-4">
           <Routes>
-            <Route path="/" element={<PublicDashboard />} />
+            {/* ✅ If user is logged in, / sends them to their dashboard. Otherwise, public dashboard */}
+            <Route path="/" element={<RoleDashboard />} />
             <Route path="/public" element={<PublicDashboard />} />
             <Route path="/public/books" element={<PublicBooks />} />
             <Route path="/public/books/:id" element={<PublicBookDetail />} />
@@ -78,16 +82,15 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/account-created" element={<AccountCreatedSuccess />} />
 
-            {/* ✅ Role-specific dashboards — all require login */}
+            {/* Role-specific dashboards */}
             <Route
               path="/admin/dashboard"
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
-                  <Dashboard />
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />
-            {/* ========== LIBRARIAN DASHBOARD ========== */}
             <Route
               path="/librarian/dashboard"
               element={
@@ -96,25 +99,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-  {/* <Route
-    path="/digital-officer/dashboard"
-    element={
-      <ProtectedRoute allowedRoles={['digital_officer', 'admin']}>
-        <Dashboard />
-      </ProtectedRoute>
-    }
-  /> */}
-
-  <Route
-    path="/digital-officer/dashboard"
-    element={
-      <ProtectedRoute allowedRoles={['digital_officer', 'librarian', 'admin']}>
-        <DigitalOfficerDashboard />
-      </ProtectedRoute>
-    }
-  />
-
-  
+            <Route
+              path="/digital-officer/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['digital_officer', 'librarian', 'admin']}>
+                  <DigitalOfficerDashboard />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/staff/dashboard"
               element={
@@ -131,8 +123,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* ========== BOOKS ========== */}
-            {/* /books/manage MUST come before /books/:id */}
+
+            {/* Books */}
             <Route
               path="/books/manage"
               element={
@@ -141,31 +133,13 @@ function App() {
                 </ProtectedRoute>
               }
             />
-             <Route
-              path="/books"
-              element={
-                <ProtectedRoute>
-                  <BookList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/books/:id"
-              element={
-                <ProtectedRoute>
-                  <BookDetails />
-                </ProtectedRoute>
-              }
-            />
-            
-
-            {/* Protected Routes (shared) */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/books" element={<ProtectedRoute><BookList /></ProtectedRoute>} />
             <Route path="/books/:id" element={<ProtectedRoute><BookDetails /></ProtectedRoute>} />
-            <Route path="/books/manage" element={<ProtectedRoute><BookManagement /></ProtectedRoute>} />
+
+            {/* Shared Protected Routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><RoleDashboard /></ProtectedRoute>} />
             <Route path="/borrowings" element={<ProtectedRoute><BorrowHistory /></ProtectedRoute>} />
-<Route
+            <Route
               path="/borrowings/all"
               element={
                 <ProtectedRoute allowedRoles={['librarian', 'admin']}>
@@ -175,7 +149,7 @@ function App() {
             />
             <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
             <Route path="/digital" element={<ProtectedRoute><DigitalResources /></ProtectedRoute>} />
- <Route
+            <Route
               path="/reports"
               element={
                 <ProtectedRoute allowedRoles={['librarian', 'admin']}>
@@ -185,7 +159,7 @@ function App() {
             />
             <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
-<Route
+            <Route
               path="/users"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'librarian']}>

@@ -1,149 +1,196 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const dropdownRef = useRef(null);
+
+  // Theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));
+
+  // Close menus on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setDropdownOpen(false);
+  }, [location.pathname]);
+
+  // Lock scroll when mobile menu open
+  useEffect(() => {
+    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMobileMenuOpen]);
+
+  // Close dropdown on outside click / Escape
+  useEffect(() => {
+    const onClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setDropdownOpen(false);
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+    setIsMobileMenuOpen(false);
   };
 
-  // Logged-out navbar
-  if (!isAuthenticated || !user) {
-    return (
+  const navLinks = (
+    <>
+      <li className="nav-item"><Link className="nav-link" to="/books">Books</Link></li>
+      <li className="nav-item"><Link className="nav-link" to="/borrowings">My Borrowings</Link></li>
+      <li className="nav-item"><Link className="nav-link" to="/digital">Digital</Link></li>
+      {(user?.role === 'digital_officer' || user?.role === 'librarian') && (
+        <li className="nav-item"><Link className="nav-link" to="/digital-officer/dashboard">Digital Management</Link></li>
+      )}
+      {user?.role === 'admin' && (
+        <li className="nav-item"><Link className="nav-link" to="/users"><i className="bi bi-people me-1"></i>Users</Link></li>
+      )}
+    </>
+  );
+
+  return (
+    <>
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top app-navbar">
         <div className="container">
           <Link className="navbar-brand d-flex align-items-center" to="/">
             <span style={{ fontSize: '1.5rem' }}>📚</span>
             <span className="ms-2 fw-bold">AI Based Library</span>
           </Link>
-          <div className="ms-auto d-flex align-items-center gap-2">
-            <Link to="/login" className="btn btn-outline-light">Login</Link>
-            <Link to="/register" className="btn btn-light">Register</Link>
-          </div>
-        </div>
-      </nav>
-    );
-  }
 
-  // Logged-in navbar
-  return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top app-navbar">
-      <div className="container">
-        <Link className="navbar-brand d-flex align-items-center" to="/">
-          <span style={{ fontSize: '1.5rem' }}>📚</span>
-          <span className="ms-2 fw-bold">AI Based Library</span>
-        </Link>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav me-auto">
-            <li className="nav-item">
-              <Link className="nav-link" to="/books">
-                <i className="bi bi-book me-1"></i>Books
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/borrowings">
-                <i className="bi bi-journal-bookmark me-1"></i>My Borrowings
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/digital">
-                <i className="bi bi-cloud-arrow-down me-1"></i>Digital
-              </Link>
-            </li>
-            {(user?.role === 'digital_officer' ||
-              user?.role === 'admin' ||
-              user?.role === 'librarian') && (
-              <li className="nav-item">
-                <Link className="nav-link" to="/digital-officer/dashboard">
-                  <i className="bi bi-cpu me-1"></i>Digital Management
-                </Link>
-              </li>
-            )}
-            {user?.role === 'admin' && (
-              <li className="nav-item">
-                <Link className="nav-link" to="/users">
-                  <i className="bi bi-people me-1"></i>Users
-                </Link>
-              </li>
-            )}
-          </ul>
-          <ul className="navbar-nav align-items-center">
-            <NotificationBell />
-            <li className="nav-item dropdown">
-              <button
-                className="nav-link dropdown-toggle btn btn-link text-white text-decoration-none d-flex align-items-center"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                <i
-                  className="bi bi-person-circle me-1"
-                  style={{ fontSize: '1.2rem' }}
-                ></i>
-                <span>{user?.first_name || user?.username}</span>
-              </button>
-              <ul
-                className={`dropdown-menu dropdown-menu-end ${
-                  dropdownOpen ? 'show' : ''
-                }`}
-              >
-                <li>
-                  <Link className="dropdown-item" to="/profile">
-                    <i className="bi bi-person me-2"></i>Profile
-                  </Link>
-                </li>
-                {(user?.role === 'digital_officer' ||
-                  user?.role === 'admin' ||
-                  user?.role === 'librarian') && (
-                  <li>
-                    <Link
-                      className="dropdown-item"
-                      to="/digital-officer/dashboard"
-                    >
-                      <i className="bi bi-cpu me-2"></i>Digital & Devices
-                      Dashboard
-                    </Link>
-                  </li>
-                )}
-                <li>
-                  <Link className="dropdown-item" to="/notifications">
-                    <i className="bi bi-bell me-2"></i>Notifications
-                  </Link>
-                </li>
-                <li>
-                  <Link className="dropdown-item" to="/change-password">
-                    <i className="bi bi-key me-2"></i>Change Password
-                  </Link>
-                </li>
-                <li><hr className="dropdown-divider" /></li>
-                <li>
-                  <button
-                    className="dropdown-item text-danger"
-                    onClick={handleLogout}
-                  >
-                    <i className="bi bi-box-arrow-right me-2"></i>Logout
+          {/* Desktop menu */}
+          <div className="d-none d-lg-flex flex-grow-1 align-items-center">
+            {!isAuthenticated || !user ? (
+              <ul className="navbar-nav ms-auto align-items-center">
+                <li className="nav-item me-3">
+                  <button onClick={toggleTheme} className="btn btn-outline-light btn-sm">
+                    {theme === 'light' ? '🌙' : '☀️'}
                   </button>
                 </li>
+                <li className="nav-item me-2"><Link to="/login" className="btn btn-outline-light">Login</Link></li>
+                <li className="nav-item"><Link to="/register" className="btn btn-light">Register</Link></li>
               </ul>
-            </li>
-          </ul>
+            ) : (
+              <>
+                <ul className="navbar-nav me-auto">{navLinks}</ul>
+
+                <ul className="navbar-nav align-items-center">
+                  <li className="nav-item me-3">
+                    <button onClick={toggleTheme} className="btn btn-link text-white" aria-label="Toggle theme">
+                      {theme === 'light' ? <i className="bi bi-moon-stars fs-5"></i> : <i className="bi bi-sun fs-5"></i>}
+                    </button>
+                  </li>
+
+                  {/* ✅ FIX: do NOT wrap NotificationBell in <li> — it renders its own <li> */}
+                  <NotificationBell />
+
+                  <li className="nav-item position-relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      className="btn btn-link text-white text-decoration-none d-flex align-items-center"
+                      onClick={() => setDropdownOpen(o => !o)}
+                      aria-haspopup="true"
+                      aria-expanded={dropdownOpen}
+                    >
+                      <i className="bi bi-person-circle me-2" style={{ fontSize: '1.2rem' }}></i>
+                      <span>{user?.first_name || user?.username}</span>
+                    </button>
+                    {dropdownOpen && (
+                      <ul className="dropdown-menu dropdown-menu-end shadow show position-absolute end-0 mt-2">
+                        <li><Link className="dropdown-item" to="/profile"><i className="bi bi-person me-2"></i>Profile</Link></li>
+                        <li><Link className="dropdown-item" to="/notifications"><i className="bi bi-bell me-2"></i>Notifications</Link></li>
+                        <li><Link className="dropdown-item" to="/change-password"><i className="bi bi-key me-2"></i>Change Password</Link></li>
+                        <li><hr className="dropdown-divider" /></li>
+                        <li><button className="dropdown-item text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2"></i>Logout</button></li>
+                      </ul>
+                    )}
+                  </li>
+                </ul>
+              </>
+            )}
+          </div>
+
+          {/* Hamburger */}
+          <button
+            className="navbar-toggler d-lg-none border-0"
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
         </div>
+      </nav>
+
+      {/* Full-screen mobile menu */}
+      <div
+        className={`mobile-overlay-menu ${isMobileMenuOpen ? 'open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!isMobileMenuOpen}
+      >
+        <button className="mobile-close-btn" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">
+          <i className="bi bi-x-lg"></i>
+        </button>
+        <ul className="mobile-menu-links">
+          {!isAuthenticated || !user ? (
+            <>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/register">Register</Link></li>
+              <li>
+                <button onClick={toggleTheme} className="mobile-theme-btn">
+                  {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li><Link to="/">Home</Link></li>
+              <li><Link to="/books">Books</Link></li>
+              <li><Link to="/borrowings">My Borrowings</Link></li>
+              <li><Link to="/digital">Digital</Link></li>
+              {(user?.role === 'digital_officer' || user?.role === 'librarian') && (
+                <li><Link to="/digital-officer/dashboard">Digital Management</Link></li>
+              )}
+              {user?.role === 'admin' && <li><Link to="/users">Users</Link></li>}
+              <li><Link to="/profile">Profile</Link></li>
+              <li>
+                <button onClick={toggleTheme} className="mobile-theme-btn">
+                  {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+                </button>
+              </li>
+              <li><button onClick={handleLogout} className="mobile-logout-btn">Logout</button></li>
+            </>
+          )}
+        </ul>
       </div>
-    </nav>
+    </>
   );
 };
 
