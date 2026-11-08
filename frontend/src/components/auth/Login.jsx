@@ -4,23 +4,29 @@ import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 
-// ✅ Single source of truth: which dashboard each role lands on
+// ✅ Single source of truth: which dashboard each role lands on.
+// Always returns a valid path — never undefined.
 const getDashboardPathForRole = (role) => {
-  switch (role) {
+  const normalized = String(role || '').toLowerCase().trim();
+
+  switch (normalized) {
     case 'admin':
+    case 'administrator':
       return '/admin/dashboard';
     case 'librarian':
       return '/librarian/dashboard';
     case 'digital_officer':
+    case 'digital_library_officer':
       return '/digital-officer/dashboard';
     case 'academic_staff':
       return '/staff/dashboard';
     case 'student':
-       return '/student/dashboard';
+      return '/student/dashboard';
     case 'guest':
-       return '/public';
+      return '/public';
     default:
-     
+      // ✅ Safe fallback — never returns undefined
+      return '/student/dashboard';
   }
 };
 
@@ -55,12 +61,14 @@ const Login = () => {
     const result = await login(formData.username, formData.password);
 
     if (result.success) {
-      // ✅ Redirect to the dashboard that belongs to this role
       const role = result.user?.role;
       const target = getDashboardPathForRole(role);
+
       toast.success(
         `Welcome back, ${result.user?.first_name || result.user?.username || ''}!`
       );
+
+      // ✅ Redirect to the dashboard that belongs to this role
       navigate(target, { replace: true });
     } else {
       setError(result.error || 'Login failed. Please check your credentials.');
@@ -170,7 +178,9 @@ const Login = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
                       >
-                        <i className={`bi bi-${showPassword ? 'eye-slash' : 'eye'}`}></i>
+                        <i
+                          className={`bi bi-${showPassword ? 'eye-slash' : 'eye'}`}
+                        ></i>
                       </motion.button>
                     )}
                   </AnimatePresence>
@@ -213,7 +223,10 @@ const Login = () => {
 
             <div className="text-center mt-2">
               <small>
-                <Link to="/forgot-password" className="text-muted text-decoration-none">
+                <Link
+                  to="/forgot-password"
+                  className="text-muted text-decoration-none"
+                >
                   Forgot password?
                 </Link>
               </small>

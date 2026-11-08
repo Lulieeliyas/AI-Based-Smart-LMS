@@ -102,19 +102,16 @@ function App() {
             <Route
               path="/digital-officer/dashboard"
               element={
-                <ProtectedRoute allowedRoles={['digital_officer', 'librarian', 'admin']}>
+                <ProtectedRoute allowedRoles={['digital_officer', 'admin']}>
                   <DigitalOfficerDashboard />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/staff/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['academic_staff', 'admin']}>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/staff/dashboard" element={
+  <ProtectedRoute allowedRoles={['academic_staff', 'admin']}>
+    <Dashboard />
+  </ProtectedRoute>
+} />
             <Route
               path="/student/dashboard"
               element={

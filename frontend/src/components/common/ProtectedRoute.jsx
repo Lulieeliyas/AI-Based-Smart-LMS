@@ -50,7 +50,6 @@ const ProtectedRoute = ({
   if (!requiredRoles && librarianOnly) requiredRoles = ['admin', 'librarian'];
 
   if (requiredRoles && !requiredRoles.includes(user.role)) {
-    // Wrong role → send them to *their own* dashboard
     return <Navigate to={getDashboardPathForRole(user.role)} replace />;
   }
 

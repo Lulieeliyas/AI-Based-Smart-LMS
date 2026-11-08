@@ -60,16 +60,57 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // ✅ Only digital_officer and admin can MANAGE digital resources.
+  // Librarians may only browse them (read-only via /digital).
+  const canManageDigital =
+    user?.role === 'digital_officer' || user?.role === 'admin';
+
+  // ✅ Librarian + admin can manage books
+  const canManageBooks =
+    user?.role === 'librarian' || user?.role === 'admin';
+
+  // ✅ Librarian + admin can manage users
+  const canManageUsers =
+    user?.role === 'librarian' || user?.role === 'admin';
+
   const navLinks = (
     <>
-      <li className="nav-item"><Link className="nav-link" to="/books">Books</Link></li>
-      <li className="nav-item"><Link className="nav-link" to="/borrowings">My Borrowings</Link></li>
-      <li className="nav-item"><Link className="nav-link" to="/digital">Digital</Link></li>
-      {(user?.role === 'digital_officer' || user?.role === 'librarian') && (
-        <li className="nav-item"><Link className="nav-link" to="/digital-officer/dashboard">Digital Management</Link></li>
+      <li className="nav-item">
+        <Link className="nav-link" to="/books">Books</Link>
+      </li>
+      <li className="nav-item">
+        <Link className="nav-link" to="/borrowings">My Borrowings</Link>
+      </li>
+      <li className="nav-item">
+        <Link className="nav-link" to="/digital">Digital</Link>
+      </li>
+
+      {/* ✅ Manage Books — librarian + admin */}
+      {canManageBooks && (
+        <li className="nav-item">
+          <Link className="nav-link" to="/books/manage">
+            Manage Books
+          </Link>
+        </li>
       )}
-      {user?.role === 'admin' && (
-        <li className="nav-item"><Link className="nav-link" to="/users"><i className="bi bi-people me-1"></i>Users</Link></li>
+
+      {/* ✅ Digital Management — digital_officer + admin only (NOT librarian) */}
+      {canManageDigital && (
+        <li className="nav-item">
+          <Link className="nav-link" to="/digital-officer/dashboard">
+            Digital Management
+          </Link>
+        </li>
+      )}
+
+      {/* ✅ Manage Users — librarian + admin */}
+      {canManageUsers && (
+        <li className="nav-item">
+          <Link className="nav-link" to="/users">
+            <i className="bi bi-people me-1"></i>
+            {user?.role === 'admin' ? 'Users' : 'Manage Users'}
+          </Link>
+        </li>
       )}
     </>
   );
@@ -88,12 +129,23 @@ const Navbar = () => {
             {!isAuthenticated || !user ? (
               <ul className="navbar-nav ms-auto align-items-center">
                 <li className="nav-item me-3">
-                  <button onClick={toggleTheme} className="btn btn-outline-light btn-sm">
+                  <button
+                    onClick={toggleTheme}
+                    className="btn btn-outline-light btn-sm"
+                  >
                     {theme === 'light' ? '🌙' : '☀️'}
                   </button>
                 </li>
-                <li className="nav-item me-2"><Link to="/login" className="btn btn-outline-light">Login</Link></li>
-                <li className="nav-item"><Link to="/register" className="btn btn-light">Register</Link></li>
+                <li className="nav-item me-2">
+                  <Link to="/login" className="btn btn-outline-light">
+                    Login
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/register" className="btn btn-light">
+                    Register
+                  </Link>
+                </li>
               </ul>
             ) : (
               <>
@@ -101,12 +153,18 @@ const Navbar = () => {
 
                 <ul className="navbar-nav align-items-center">
                   <li className="nav-item me-3">
-                    <button onClick={toggleTheme} className="btn btn-link text-white" aria-label="Toggle theme">
-                      {theme === 'light' ? <i className="bi bi-moon-stars fs-5"></i> : <i className="bi bi-sun fs-5"></i>}
+                    <button
+                      onClick={toggleTheme}
+                      className="btn btn-link text-white"
+                      aria-label="Toggle theme"
+                    >
+                      {theme === 'light'
+                        ? <i className="bi bi-moon-stars fs-5"></i>
+                        : <i className="bi bi-sun fs-5"></i>}
                     </button>
                   </li>
 
-                  {/* ✅ FIX: do NOT wrap NotificationBell in <li> — it renders its own <li> */}
+                  {/* ✅ NotificationBell renders its own <li> — do NOT wrap it */}
                   <NotificationBell />
 
                   <li className="nav-item position-relative" ref={dropdownRef}>
@@ -117,16 +175,38 @@ const Navbar = () => {
                       aria-haspopup="true"
                       aria-expanded={dropdownOpen}
                     >
-                      <i className="bi bi-person-circle me-2" style={{ fontSize: '1.2rem' }}></i>
+                      <i
+                        className="bi bi-person-circle me-2"
+                        style={{ fontSize: '1.2rem' }}
+                      ></i>
                       <span>{user?.first_name || user?.username}</span>
                     </button>
                     {dropdownOpen && (
                       <ul className="dropdown-menu dropdown-menu-end shadow show position-absolute end-0 mt-2">
-                        <li><Link className="dropdown-item" to="/profile"><i className="bi bi-person me-2"></i>Profile</Link></li>
-                        <li><Link className="dropdown-item" to="/notifications"><i className="bi bi-bell me-2"></i>Notifications</Link></li>
-                        <li><Link className="dropdown-item" to="/change-password"><i className="bi bi-key me-2"></i>Change Password</Link></li>
+                        <li>
+                          <Link className="dropdown-item" to="/profile">
+                            <i className="bi bi-person me-2"></i>Profile
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item" to="/notifications">
+                            <i className="bi bi-bell me-2"></i>Notifications
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item" to="/change-password">
+                            <i className="bi bi-key me-2"></i>Change Password
+                          </Link>
+                        </li>
                         <li><hr className="dropdown-divider" /></li>
-                        <li><button className="dropdown-item text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2"></i>Logout</button></li>
+                        <li>
+                          <button
+                            className="dropdown-item text-danger"
+                            onClick={handleLogout}
+                          >
+                            <i className="bi bi-box-arrow-right me-2"></i>Logout
+                          </button>
+                        </li>
                       </ul>
                     )}
                   </li>
@@ -155,9 +235,14 @@ const Navbar = () => {
         aria-modal="true"
         aria-hidden={!isMobileMenuOpen}
       >
-        <button className="mobile-close-btn" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">
+        <button
+          className="mobile-close-btn"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Close menu"
+        >
           <i className="bi bi-x-lg"></i>
         </button>
+
         <ul className="mobile-menu-links">
           {!isAuthenticated || !user ? (
             <>
@@ -175,17 +260,39 @@ const Navbar = () => {
               <li><Link to="/books">Books</Link></li>
               <li><Link to="/borrowings">My Borrowings</Link></li>
               <li><Link to="/digital">Digital</Link></li>
-              {(user?.role === 'digital_officer' || user?.role === 'librarian') && (
-                <li><Link to="/digital-officer/dashboard">Digital Management</Link></li>
+
+              {/* ✅ Manage Books — librarian + admin */}
+              {canManageBooks && (
+                <li><Link to="/books/manage">Manage Books</Link></li>
               )}
-              {user?.role === 'admin' && <li><Link to="/users">Users</Link></li>}
+
+              {/* ✅ Digital Management — digital_officer + admin only */}
+              {canManageDigital && (
+                <li>
+                  <Link to="/digital-officer/dashboard">Digital Management</Link>
+                </li>
+              )}
+
+              {/* ✅ Manage Users — librarian + admin */}
+              {canManageUsers && (
+                <li>
+                  <Link to="/users">
+                    {user?.role === 'admin' ? 'Users' : 'Manage Users'}
+                  </Link>
+                </li>
+              )}
+
               <li><Link to="/profile">Profile</Link></li>
               <li>
                 <button onClick={toggleTheme} className="mobile-theme-btn">
                   {theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode'}
                 </button>
               </li>
-              <li><button onClick={handleLogout} className="mobile-logout-btn">Logout</button></li>
+              <li>
+                <button onClick={handleLogout} className="mobile-logout-btn">
+                  Logout
+                </button>
+              </li>
             </>
           )}
         </ul>
