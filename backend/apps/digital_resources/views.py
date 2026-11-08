@@ -1,6 +1,6 @@
 import os
 import mimetypes
-import resource
+
 
 from django.db.models import F, Q
 from django.http import FileResponse, Http404, HttpResponseRedirect

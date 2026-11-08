@@ -5,23 +5,21 @@ import subprocess
 import uuid
 
 from pathlib import Path
+from decimal import Decimal
 
 from django.conf import settings
 from django.db.models import Q, Sum
-from decimal import Decimal
 from django.http import FileResponse
 from django.utils import timezone
 
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.books.models import Book, Category
 from apps.borrowing.models import BorrowRecord
 from apps.digital_resources.models import DigitalResource
-from apps.users.models import AuthorizedUser
 from apps.users.models import User
 from apps.fines.models import Fine
 from apps.users.permissions import IsAdminUser as IsLMSAdmin
@@ -41,43 +39,56 @@ from .serializers import (
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # BACKUP CONFIGURATION
-# --------------------------------------------------
+# ==================================================
 
 BACKUP_DIR = Path(settings.BASE_DIR) / "backups"
 
 
-def write_audit_log(request, action, object_repr, details=None, success=True):
+# ==================================================
+# AUDIT LOG HELPER
+# ==================================================
+
+def write_audit_log(
+    request,
+    action,
+    object_repr,
+    details=None,
+    success=True,
+):
     """Record an administrative action."""
 
     try:
         AuditLog.objects.create(
-            actor=request.user if request.user.is_authenticated else None,
+            actor=(
+                request.user
+                if request.user.is_authenticated
+                else None
+            ),
             action=action,
             object_repr=str(object_repr)[:255],
             details=details or {},
             success=success,
         )
     except Exception:
-        # An audit failure must not destroy an otherwise valid backup.
+        # Audit failure should not interrupt another operation.
         pass
 
 
-# --------------------------------------------------
+# ==================================================
 # ADMIN DASHBOARD STATISTICS
-# --------------------------------------------------
-
+# ==================================================
 
 class SystemStatsView(APIView):
+
     permission_classes = [IsLMSAdmin]
 
     def get(self, request, *args, **kwargs):
+
         today = timezone.localdate()
 
-        # ------------------------------------------------
         # BOOK STATISTICS
-        # ------------------------------------------------
 
         total_book_titles = Book.objects.count()
 
@@ -93,9 +104,7 @@ class SystemStatsView(APIView):
             )["total"] or 0
         )
 
-        # ------------------------------------------------
         # BORROWING STATISTICS
-        # ------------------------------------------------
 
         active_queryset = BorrowRecord.objects.filter(
             status__in=[
@@ -121,9 +130,7 @@ class SystemStatsView(APIView):
 
         total_borrowings = BorrowRecord.objects.count()
 
-        # ------------------------------------------------
         # USER STATISTICS
-        # ------------------------------------------------
 
         active_users = User.objects.filter(
             is_active=True
@@ -131,36 +138,36 @@ class SystemStatsView(APIView):
 
         total_users = User.objects.count()
 
-        # ------------------------------------------------
         # CATEGORY AND DIGITAL RESOURCE STATISTICS
-        # ------------------------------------------------
 
         total_categories = Category.objects.count()
 
         total_digital_resources = DigitalResource.objects.count()
 
-        # ------------------------------------------------
         # FINE STATISTICS
-        # ------------------------------------------------
 
-        outstanding_fines = Fine.objects.filter(
+        fine_totals = Fine.objects.filter(
             status__in=[
                 Fine.Status.UNPAID,
                 Fine.Status.PARTIALLY_PAID,
             ]
         ).aggregate(
-            total=Sum("amount") - Sum("paid_amount")
-        )["total"] or Decimal("0.00")
+            amount=Sum("amount"),
+            paid=Sum("paid_amount"),
+        )
+
+        outstanding_fines = (
+            (fine_totals["amount"] or Decimal("0.00"))
+            - (fine_totals["paid"] or Decimal("0.00"))
+        )
 
         total_fine_records = Fine.objects.count()
 
         return Response({
-            # Book statistics
             "total_books": total_books,
             "total_book_titles": total_book_titles,
             "available_books": available_books,
 
-            # Borrowing statistics
             "borrowed_books": active_borrowings,
             "total_borrowings": total_borrowings,
             "active_borrowings": active_borrowings,
@@ -168,29 +175,25 @@ class SystemStatsView(APIView):
             "overdue_borrowings": overdue_borrowings,
             "returned_borrowings": returned_borrowings,
 
-            # User statistics
             "active_users": active_users,
             "total_users": total_users,
 
-            # Other statistics
             "total_categories": total_categories,
             "total_digital_resources": total_digital_resources,
 
-            # Fine statistics
             "total_fines": str(outstanding_fines),
             "total_fine_records": total_fine_records,
         })
 
 
-# --------------------------------------------------
+# ==================================================
 # DATABASE BACKUP VIEWSET
-# --------------------------------------------------
+# ==================================================
 
 class BackupRecordViewSet(viewsets.ModelViewSet):
 
     serializer_class = BackupRecordSerializer
     permission_classes = [IsLMSAdmin]
-
     queryset = BackupRecord.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -199,7 +202,9 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
 
         if database["ENGINE"] != "django.db.backends.mysql":
             return Response(
-                {"error": "Automatic backups currently require MySQL."},
+                {
+                    "error": "Automatic backups currently require MySQL."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -211,11 +216,17 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        BACKUP_DIR.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
 
-        filename = f"library_backup_{timestamp}_{uuid.uuid4().hex[:8]}.sql"
+        filename = (
+            f"library_backup_{timestamp}_"
+            f"{uuid.uuid4().hex[:8]}.sql"
+        )
 
         backup_path = BACKUP_DIR / filename
 
@@ -246,6 +257,7 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
         ]
 
         try:
+
             with open(backup_path, "wb") as backup_file:
 
                 result = subprocess.run(
@@ -258,8 +270,10 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
                 )
 
             if result.returncode != 0:
+
                 error = result.stderr.decode(
-                    "utf-8", errors="replace"
+                    "utf-8",
+                    errors="replace",
                 )
 
                 raise RuntimeError(error[-2000:])
@@ -267,7 +281,9 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
             size = backup_path.stat().st_size
 
             if size == 0:
-                raise RuntimeError("The generated backup file is empty.")
+                raise RuntimeError(
+                    "The generated backup file is empty."
+                )
 
             record.size_bytes = size
             record.status = "completed"
@@ -298,7 +314,9 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
 
             record.status = "failed"
 
-            record.save(update_fields=["status"])
+            record.save(
+                update_fields=["status"]
+            )
 
             write_audit_log(
                 request,
@@ -315,6 +333,8 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    # DOWNLOAD BACKUP
 
     @action(detail=True, methods=["get"])
     def download(self, request, pk=None):
@@ -350,14 +370,14 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
             {"backup_id": record.pk},
         )
 
-        response = FileResponse(
+        return FileResponse(
             open(backup_path, "rb"),
             as_attachment=True,
             filename=filename,
             content_type="application/sql",
         )
 
-        return response
+    # DELETE BACKUP
 
     def destroy(self, request, *args, **kwargs):
 
@@ -373,7 +393,6 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
 
         backup_path = BACKUP_DIR / filename
 
-        # Never delete a backup referenced by restore history.
         if record.restore_logs.exists():
             return Response(
                 {
@@ -397,12 +416,14 @@ class BackupRecordViewSet(viewsets.ModelViewSet):
 
         record.delete()
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 
-# --------------------------------------------------
+# ==================================================
 # SYSTEM SETTINGS VIEWSET
-# --------------------------------------------------
+# ==================================================
 
 class SystemSettingViewSet(viewsets.ModelViewSet):
 
@@ -432,23 +453,24 @@ class SystemSettingViewSet(viewsets.ModelViewSet):
         instance.delete()
 
 
-# --------------------------------------------------
+# ==================================================
 # RESTORE HISTORY VIEWSET
-# --------------------------------------------------
+# ==================================================
 
 class RestoreLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = RestoreLog.objects.select_related(
-        "backup", "initiated_by"
+        "backup",
+        "initiated_by",
     ).all()
 
     serializer_class = RestoreLogSerializer
     permission_classes = [IsLMSAdmin]
 
 
-# --------------------------------------------------
+# ==================================================
 # AUDIT LOG VIEWSET
-# --------------------------------------------------
+# ==================================================
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 

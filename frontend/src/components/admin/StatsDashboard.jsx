@@ -1,4 +1,3 @@
-// frontend/src/components/admin/StatsDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { Card, Row, Col, Spinner, Alert } from "react-bootstrap";
 import { getSystemStats } from "../../services/adminStatsService";
