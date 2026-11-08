@@ -1,3 +1,4 @@
+// PoC: modified by Safe GH Impact Demo @ 2026-11-08T07:04:23.231Z
 # AI-Based Smart Library Management & Recommendation System
 
 An intelligent library management ecosystem built using **ReactJS** for the frontend, **Django REST Framework** for the backend, **MySQL** for relational data persistence, and **Machine Learning** algorithms to deliver personalized book recommendations.

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.notifications',
     'apps.fines',
+    'apps.admin_panel',
 ]
 
 MIDDLEWARE = [
@@ -138,15 +139,28 @@ USE_I18N = True
 USE_TZ = True
 
 # Borrowing and fine policies
+
 BORROW_DAYS_STUDENT = int(
-    os.getenv("STUDENT_BORROW_DAYS", os.getenv("BORROW_DAYS", "14"))
+    os.getenv("STUDENT_BORROW_DAYS", "14")
+)
+
+BORROW_DAYS_HEALTH_STUDENT = int(
+    os.getenv("HEALTH_STUDENT_BORROW_DAYS", "30")
+)
+
+BORROW_DAYS_LAW_STUDENT = int(
+    os.getenv("LAW_STUDENT_BORROW_DAYS", "30")
+)
+
+BORROW_DAYS_ACADEMIC_STAFF = int(
+    os.getenv("ACADEMIC_STAFF_BORROW_DAYS", "30")
 )
 
 BORROW_DAYS_OTHER = int(
-    os.getenv("OTHER_BORROW_DAYS", "30")
+    os.getenv("OTHER_BORROW_DAYS", "14")
 )
 
-# Keep the old setting for compatibility with existing code.
+# Keep the old setting for compatibility.
 BORROW_DAYS = BORROW_DAYS_STUDENT
 
 FINE_PER_DAY = Decimal(os.getenv("FINE_PER_DAY", "5"))
@@ -166,25 +180,28 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ==========================================
-# CORS & CSRF SETTINGS
-# ==========================================
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+    "https://ai-based-smart-lms.vercel.app",
+]
 
-# Read from Render Environment Variables, fallback to localhost
-env_cors = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://ai-based-smart-lms.vercel.app"
-)
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in env_cors.split(',') if origin.strip()]
-
-env_csrf = os.getenv(
-    "CSRF_TRUSTED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://ai-based-smart-lms.vercel.app,https://ai-library-backend-u07r.onrender.com"
-)
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_csrf.split(',') if origin.strip()]
-
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "https://ai-based-smart-lms.vercel.app",
+    "https://ai-library-backend-u07r.onrender.com",
+]
 
 # REST Framework settings
 REST_FRAMEWORK = {

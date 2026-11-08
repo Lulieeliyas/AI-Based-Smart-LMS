@@ -1,137 +1,197 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import AdminDashboard from './AdminDashboard';
-import userService from '../../services/userService';
-import bookService from '../../services/bookService';
-import borrowingService from '../../services/borrowingService';
+import { Link } from 'react-router-dom';
+import { getSystemStats } from '../../services/adminStatsService';
+import DashboardStats from './DashboardStats';
+import AdminFeatures from '../admin/AdminFeatures';
+import './Dashboard.css';
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  
-  // Initialize stats with default 0 values so components don't crash
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    students: 0,
-    staff: 0,
-    totalBooks: 0,
-    availableBooks: 0,
-    totalBorrowings: 0,
-    borrowedBooks: 0,
-    overdueBooks: 0,
-    returnedBorrowings: 0,
-    digitalResources: 0,
-    recentActivities: [],
-  });
+    const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    const fetchAdminData = async () => {
-      setLoading(true);
-      try {
-        // Fetch data from all 3 APIs in parallel
-        const [usersRes, booksRes, borrowStatsRes] = await Promise.allSettled([
-          userService.getUsers(),
-          bookService.getBooks({ page: 1 }),
-          borrowingService.getBorrowingStatistics(),
-        ]);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
-        // 1. Process Users Data
-        let totalUsers = 0;
-        let students = 0;
-        let staff = 0;
-        
-        if (usersRes.status === 'fulfilled') {
-          const data = usersRes.value.data;
-          // Handle Django pagination (results array + count) OR plain array
-          const userList = data?.results || data || [];
-          totalUsers = data?.count || userList.length;
-          
-          userList.forEach(u => {
-            if (u.role === 'student') students++;
-            if (u.role === 'librarian' || u.role === 'academic_staff') staff++;
-          });
+    const fetchStats = useCallback(async () => {
+        if (!isAdmin) return;
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const data = await getSystemStats();
+
+            if (!data || typeof data !== 'object') {
+                throw new Error('The server returned invalid dashboard statistics.');
+            }
+
+            setStats(data);
+        } catch (err) {
+            console.error('Dashboard statistics error:', err);
+
+            setError(
+                err.response?.data?.detail ||
+                err.response?.data?.error ||
+                err.message ||
+                'Unable to load dashboard statistics.'
+            );
+        } finally {
+            setLoading(false);
         }
+    }, [isAdmin]);
 
-        // 2. Process Books Data
-        let totalBooks = 0;
-        let availableBooks = 0;
-        if (booksRes.status === 'fulfilled') {
-          const data = booksRes.value.data;
-          const bookList = data?.results || data || [];
-          totalBooks = data?.count || bookList.length;
-          
-          // Check if available_copies > 0
-          availableBooks = bookList.filter(b => (b.available_copies || 0) > 0).length;
-        }
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
-        // 3. Process Borrowing Statistics
-        let totalBorrowings = 0;
-        let activeBorrowings = 0;
-        let overdueBorrowings = 0;
-        let returnedBorrowings = 0;
+    const welcomeName =
+        user?.first_name ||
+        user?.username ||
+        'User';
 
-        if (borrowStatsRes.status === 'fulfilled') {
-          const statsData = borrowStatsRes.value.data || {};
-          totalBorrowings = statsData.total_borrowings || 0;
-          activeBorrowings = statsData.active_borrowings || 0;
-          overdueBorrowings = statsData.overdue_borrowings || 0;
-          returnedBorrowings = statsData.returned_borrowings || 0;
-        }
-
-        // Update state with the real backend numbers
-        setStats({
-          totalUsers,
-          students,
-          staff,
-          totalBooks,
-          availableBooks,
-          totalBorrowings,
-          borrowedBooks: activeBorrowings,
-          overdueBooks: overdueBorrowings,
-          returnedBorrowings,
-          digitalResources: 0, // Update this if you add a digital count service
-          recentActivities: [], // Add real activity logs if you have an endpoint
-        });
-
-      } catch (err) {
-        console.error("Failed to load admin stats:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user?.role === 'admin') {
-      fetchAdminData();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  if (loading) {
     return (
-      <div className="text-center mt-5">
-        <div className="spinner-border text-primary" role="status"></div>
-        <p className="mt-2">Loading real-time database records...</p>
-      </div>
+        <main className={isAdmin ? 'admin-dashboard' : ''}>
+            {/* Welcome panel */}
+            <section className="admin-welcome">
+                <div className="admin-welcome-content">
+                    <span className="admin-welcome-eyebrow">
+                        AI Library Management System
+                    </span>
+
+                    <h2>
+                        Welcome back, {welcomeName}
+                    </h2>
+
+                    <p>
+                        {isAdmin
+                            ? 'Manage your library, monitor system activity, and keep track of your library resources from one place.'
+                            : user?.role === 'academic_staff'
+                                ? 'Explore library resources and manage your borrowing activities.'
+                                : 'Explore library resources and discover books for your learning.'}
+                    </p>
+                </div>
+
+                <i
+                    className="bi bi-journal-bookmark-fill admin-welcome-decoration"
+                    aria-hidden="true"
+                />
+            </section>
+
+            {/* Administrator dashboard statistics */}
+            {isAdmin && (
+                <>
+                    {loading && !stats ? (
+                        <div className="admin-dashboard-state">
+                            <div
+                                className="spinner-border text-primary"
+                                role="status"
+                            >
+                                <span className="visually-hidden">
+                                    Loading...
+                                </span>
+                            </div>
+                            <p>Loading live library statistics...</p>
+                        </div>
+                    ) : error && !stats ? (
+                        <div className="admin-dashboard-error" role="alert">
+                            <strong>
+                                <i className="bi bi-exclamation-triangle me-2" />
+                                Unable to load dashboard statistics
+                            </strong>
+
+                            <p>{error}</p>
+
+                            <button
+                                type="button"
+                                className="admin-refresh-button"
+                                onClick={fetchStats}
+                                disabled={loading}
+                            >
+                                <i className="bi bi-arrow-clockwise" />
+                                Try Again
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            {error && (
+                                <div className="alert alert-warning" role="alert">
+                                    {error}
+                                </div>
+                            )}
+
+                            <DashboardStats stats={stats} />
+
+                            <div className="d-flex justify-content-end mt-3">
+                                <button
+                                    type="button"
+                                    className="admin-refresh-button"
+                                    onClick={fetchStats}
+                                    disabled={loading}
+                                >
+                                    <i className={`bi ${
+                                        loading
+                                            ? 'bi-arrow-repeat'
+                                            : 'bi-arrow-clockwise'
+                                    }`} />
+                                    {loading
+                                        ? 'Refreshing...'
+                                        : 'Refresh Statistics'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
+
+            {/* Quick actions */}
+            <section className="mt-4">
+                <div className="admin-section-heading">
+                    <div>
+                        <h4>Quick Actions</h4>
+                        <p>Quick access to frequently used library services</p>
+                    </div>
+                </div>
+
+                <div className="row g-3">
+                    <div className="col-md-4 col-sm-6">
+                        <Link
+                            to="/books"
+                            className="btn btn-outline-primary w-100 py-3"
+                        >
+                            <i className="bi bi-search me-2" />
+                            Search Books
+                        </Link>
+                    </div>
+
+                    <div className="col-md-4 col-sm-6">
+                        <Link
+                            to="/borrowings"
+                            className="btn btn-outline-primary w-100 py-3"
+                        >
+                            <i className="bi bi-journal-arrow-up me-2" />
+                            My Borrowings
+                        </Link>
+                    </div>
+
+                    <div className="col-md-4 col-sm-6">
+                        <Link
+                            to="/digital"
+                            className="btn btn-outline-primary w-100 py-3"
+                        >
+                            <i className="bi bi-file-earmark-pdf me-2" />
+                            Digital Resources
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* Administrator feature dropdowns */}
+            {isAdmin && <AdminFeatures />}
+        </main>
     );
-  }
-
-  // Render Admin Dashboard for admins
-  if (user?.role === 'admin') {
-    return <AdminDashboard stats={stats} />;
-  }
-
-  // Fallback for other roles
-  return (
-    <div className="container mt-5">
-      <div className="card shadow-sm border-0">
-        <div className="card-body text-center p-5">
-          <h2 className="mb-3">👋 Welcome, {user?.first_name || user?.username}!</h2>
-          <p className="text-muted">Please navigate to your specific dashboard.</p>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 export default Dashboard;

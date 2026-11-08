@@ -763,6 +763,15 @@ class EmailVerificationView(generics.GenericAPIView):
         user.save()
         verification.delete()
 
+                # Notify administrators only after successful account verification.
+        try:
+            from apps.notifications.services import NotificationService
+            NotificationService.notify_admins_new_registration(user)
+        except Exception:
+            logger.exception(
+                'Failed to notify administrators about new registration.'
+            )
+
         logger.info(f"Account verified and activated for {user.email}")
 
         return Response({

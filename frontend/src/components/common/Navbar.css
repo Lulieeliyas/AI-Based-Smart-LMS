@@ -1,0 +1,163 @@
+
+/* Top navigation bar */
+.app-navbar {
+    background-color: #17243a !important;
+    color: #ffffff;
+    min-height: 70px;
+    height: 70px;
+    width: 100%;
+    z-index: 1030;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Brand */
+.app-navbar .navbar-brand {
+    color: #ffffff !important;
+    font-size: 1.15rem;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.app-navbar .navbar-brand:hover {
+    color: #e2e8f0 !important;
+}
+
+.navbar-logo {
+    font-size: 1.5rem;
+}
+
+/* Right-side actions */
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+}
+
+/* Notification bell */
+.navbar-notification {
+    display: flex;
+    align-items: center;
+}
+
+.app-navbar .navbar-notification button,
+.app-navbar .navbar-notification a {
+    color: #ffffff !important;
+}
+
+/* Profile button */
+.navbar-profile {
+    position: relative;
+}
+
+.profile-button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+.profile-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-icon {
+    font-size: 1.4rem;
+}
+
+.profile-chevron {
+    font-size: 0.7rem;
+    margin-left: 3px;
+}
+
+/* Profile dropdown */
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    left: auto;
+    min-width: 230px;
+    padding: 8px 0;
+    background-color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    z-index: 1060;
+}
+
+.profile-dropdown .dropdown-item {
+    padding: 10px 16px;
+    color: #17243a;
+    font-size: 0.9rem;
+}
+
+.profile-dropdown .dropdown-item:hover {
+    background-color: #f1f5f9;
+}
+
+.profile-dropdown .dropdown-divider {
+    margin: 6px 0;
+}
+
+/* Click outside to close */
+.profile-dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: transparent;
+}
+
+/* Keep dropdown above backdrop */
+.profile-dropdown {
+    z-index: 1060;
+}
+
+/* Login and register buttons */
+.app-navbar .btn-outline-light {
+    border-color: #ffffff;
+    color: #ffffff;
+}
+
+.app-navbar .btn-outline-light:hover {
+    background-color: #ffffff;
+    color: #17243a;
+}
+
+.app-navbar .btn-light {
+    background-color: #ffffff;
+    color: #17243a;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .app-navbar {
+        min-height: 60px;
+        height: 60px;
+    }
+
+    .navbar-actions {
+        gap: 10px;
+    }
+
+    .profile-name {
+        display: none;
+    }
+
+    .profile-button {
+        padding: 7px;
+    }
+
+    .app-navbar .navbar-brand {
+        font-size: 0.95rem;
+    }
+
+    .navbar-logo {
+        font-size: 1.3rem;
+    }
+}

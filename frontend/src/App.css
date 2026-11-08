@@ -264,4 +264,139 @@ h1, h2, h3, h4, h5, h6 { color: var(--text-h); }
   .mobile-overlay-menu {
     display: none !important;
   }
+}/* =========================================
+   GLOBAL APPLICATION LAYOUT
+========================================= */
+
+:root {
+    --app-navbar-height: 70px;
+    --app-sidebar-collapsed-width: 58px;
+    --app-sidebar-expanded-width: 270px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    padding-top: var(--app-navbar-height);
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* Main application wrapper */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+    width: 100%;
+    padding-bottom: 30px;
+}
+
+/* =========================================
+   TOP NAVBAR
+========================================= */
+
+.app-navbar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+}
+
+.app-navbar .dropdown-menu {
+    z-index: 1060;
+}
+
+/* =========================================
+   MAIN APPLICATION AREA
+========================================= */
+
+.app-main-layout {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: calc(100vh - var(--app-navbar-height));
+    align-items: stretch;
+
+    transition: padding-left 0.25s ease;
+}
+
+/* Space reserved for the fixed sidebar */
+.app-main-layout.has-sidebar {
+    padding-left: var(--app-sidebar-collapsed-width);
+}
+
+/* Reserve the entire sidebar width when expanded */
+.app-main-layout.has-sidebar.sidebar-expanded {
+    padding-left: var(--app-sidebar-expanded-width);
+}
+
+/* Main page content */
+.app-main-content {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding-bottom: 30px;
+}
+
+/* Prevent children from forcing horizontal overflow */
+.app-main-content > * {
+    max-width: 100%;
+}
+
+/* =========================================
+   PAGE CONTAINERS
+========================================= */
+
+.dashboard-container {
+    width: 100%;
+    max-width: 100%;
+}
+
+.page-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 30px 15px;
+}
+
+footer {
+    margin-top: auto;
+}
+
+/* =========================================
+   TABLET AND MOBILE
+========================================= */
+
+@media (max-width: 991.98px) {
+    :root {
+        --app-navbar-height: 60px;
+        --app-sidebar-collapsed-width: 48px;
+    }
+
+    body {
+        padding-top: var(--app-navbar-height);
+    }
+
+    .app-main-layout {
+        min-height: calc(100vh - var(--app-navbar-height));
+    }
+
+    /* Keep the page beside the expanded sidebar */
+    .app-main-layout.has-sidebar.sidebar-expanded {
+        padding-left: var(--app-sidebar-expanded-width);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-container {
+        padding: 20px 10px;
+    }
 }

@@ -28,7 +28,7 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-    // Registered-user editing
+  // Registered-user editing
   const [editingRegisteredUser, setEditingRegisteredUser] = useState(null);
   const [registeredUserForm, setRegisteredUserForm] = useState({
     first_name: '',
@@ -56,14 +56,20 @@ const UserManagement = () => {
   // Authorized users
   const [authorizedUsers, setAuthorizedUsers] = useState([]);
   const [authorizedLoading, setAuthorizedLoading] = useState(false);
-  const [showAddAuthorizedForm, setShowAddAuthorizedForm] =
-    useState(false);
   const [authorizedSearch, setAuthorizedSearch] = useState('');
+
+  // Admin dropdown and modal
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [activeAdminModal, setActiveAdminModal] = useState(null);
+  // activeAdminModal: 'add' | 'upload' | null
+
+  // Add authorized user
   const [authorizedForm, setAuthorizedForm] = useState({
     ...EMPTY_AUTHORIZED_FORM,
   });
   const [authorizedSaving, setAuthorizedSaving] = useState(false);
 
+  // Edit authorized user
   const [editingAuthorizedUser, setEditingAuthorizedUser] = useState(null);
   const [editAuthorizedForm, setEditAuthorizedForm] = useState({
     ...EMPTY_AUTHORIZED_FORM,
@@ -194,59 +200,61 @@ const UserManagement = () => {
     }
   };
 
+  // --------------------------------------------------
+  // Edit registered user
+  // --------------------------------------------------
+  const handleEditRegisteredUser = (userItem) => {
+    setEditingRegisteredUser(userItem);
+    setRegisteredUserForm({
+      first_name: userItem.first_name || '',
+      last_name: userItem.last_name || '',
+      email: userItem.email || '',
+      phone: userItem.phone || '',
+      department: userItem.department || '',
+    });
+  };
 
-const handleEditRegisteredUser = (userItem) => {
-  setEditingRegisteredUser(userItem);
-  setRegisteredUserForm({
-    first_name: userItem.first_name || '',
-    last_name: userItem.last_name || '',
-    email: userItem.email || '',
-    phone: userItem.phone || '',
-    department: userItem.department || '',
-  });
-};
+  const handleRegisteredUserFormChange = (event) => {
+    const { name, value } = event.target;
 
-const handleRegisteredUserFormChange = (event) => {
-  const { name, value } = event.target;
+    setRegisteredUserForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
 
-  setRegisteredUserForm((previous) => ({
-    ...previous,
-    [name]: value,
-  }));
-};
+  const handleSaveRegisteredUser = async (event) => {
+    event.preventDefault();
 
-const handleSaveRegisteredUser = async (event) => {
-  event.preventDefault();
+    if (!editingRegisteredUser) return;
 
-  if (!editingRegisteredUser) return;
+    setSavingRegisteredUser(true);
 
-  setSavingRegisteredUser(true);
+    try {
+      await userService.partialUpdateUser(
+        editingRegisteredUser.id,
+        registeredUserForm
+      );
 
-  try {
-    await userService.partialUpdateUser(
-      editingRegisteredUser.id,
-      registeredUserForm
-    );
+      toast.success('User details updated successfully.');
+      setEditingRegisteredUser(null);
+      await fetchUsers();
+    } catch (err) {
+      console.error('Error updating user:', err);
 
-    toast.success('User details updated successfully.');
-    setEditingRegisteredUser(null);
-    await fetchUsers();
-  } catch (error) {
-    console.error('Error updating user:', error);
+      const message =
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        Object.values(err.response?.data || {})
+          .flat()
+          .find((value) => typeof value === 'string') ||
+        'Failed to update user. Please try again.';
 
-    const message =
-      error.response?.data?.detail ||
-      error.response?.data?.error ||
-      Object.values(error.response?.data || {})
-        .flat()
-        .find((value) => typeof value === 'string') ||
-      'Failed to update user. Please try again.';
-
-    toast.error(message);
-  } finally {
-    setSavingRegisteredUser(false);
-  }
-};
+      toast.error(message);
+    } finally {
+      setSavingRegisteredUser(false);
+    }
+  };
 
   // --------------------------------------------------
   // Activate or deactivate account
@@ -287,8 +295,9 @@ const handleSaveRegisteredUser = async (event) => {
     }
   };
 
-
-  // Deactivate account while preserving user history.
+  // --------------------------------------------------
+  // Deactivate account while preserving user history
+  // --------------------------------------------------
   const handleDeleteUser = async (userId, username) => {
     const confirmed = window.confirm(
       `Are you sure you want to deactivate user "${username}"? ` +
@@ -316,6 +325,25 @@ const handleSaveRegisteredUser = async (event) => {
       setError(message);
       toast.error(message);
     }
+  };
+
+  // --------------------------------------------------
+  // Admin dropdown and modal controls
+  // --------------------------------------------------
+  const openAdminModal = (modal) => {
+    setActiveAdminModal(modal);
+    setShowAddMenu(false);
+  };
+
+  const closeAdminModal = () => {
+    if (authorizedSaving || csvUploading) return;
+
+    setActiveAdminModal(null);
+    setAuthorizedForm({ ...EMPTY_AUTHORIZED_FORM });
+    setCsvFile(null);
+
+    const input = document.getElementById('authorized-users-csv');
+    if (input) input.value = '';
   };
 
   // --------------------------------------------------
@@ -363,11 +391,12 @@ const handleSaveRegisteredUser = async (event) => {
       }
 
       setCsvFile(null);
-
-      await fetchAuthorizedUsers();
+      setActiveAdminModal(null);
 
       const input = document.getElementById('authorized-users-csv');
       if (input) input.value = '';
+
+      await fetchAuthorizedUsers();
     } catch (err) {
       console.error('CSV upload failed:', err);
 
@@ -382,6 +411,52 @@ const handleSaveRegisteredUser = async (event) => {
     } finally {
       setCsvUploading(false);
     }
+  };
+
+  // --------------------------------------------------
+  // Download authorized-users CSV template
+  // --------------------------------------------------
+  const handleDownloadCSVTemplate = () => {
+    const headers = [
+      'student_id',
+      'first_name',
+      'last_name',
+      'email',
+      'phone',
+      'department',
+      'role',
+    ];
+
+    const exampleRow = [
+      'MAU/0001/20',
+      'Abebe',
+      'Kebede',
+      'abebe@example.com',
+      '0912345678',
+      'Software Engineering',
+      'student',
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      exampleRow.join(','),
+    ].join('\r\n');
+
+    const blob = new Blob(['\uFEFF', csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = downloadUrl;
+    link.download = 'authorized_users_template.csv';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(downloadUrl);
   };
 
   // --------------------------------------------------
@@ -443,11 +518,14 @@ const handleSaveRegisteredUser = async (event) => {
       toast.success(message);
 
       setAuthorizedForm({ ...EMPTY_AUTHORIZED_FORM });
-      setShowAddAuthorizedForm(false);
+      setActiveAdminModal(null);
 
       await fetchAuthorizedUsers();
     } catch (err) {
-      console.error('Failed to add authorized user:', err);
+      console.error(
+  'Failed to add authorized user:',
+  err.response?.data || err.message
+);
 
       const data = err.response?.data;
       const message =
@@ -466,7 +544,6 @@ const handleSaveRegisteredUser = async (event) => {
       setAuthorizedSaving(false);
     }
   };
-
 
   // --------------------------------------------------
   // Edit authorized roster record
@@ -625,31 +702,31 @@ const handleSaveRegisteredUser = async (event) => {
 
   const showAllUsers = usersPerPage === 'all';
 
-const pageSize = showAllUsers
-  ? Math.max(filteredUsers.length, 1)
-  : Number(usersPerPage);
+  const pageSize = showAllUsers
+    ? Math.max(filteredUsers.length, 1)
+    : Number(usersPerPage);
 
-const totalPages = showAllUsers
-  ? 1
-  : Math.ceil(filteredUsers.length / pageSize);
+  const totalPages = showAllUsers
+    ? 1
+    : Math.ceil(filteredUsers.length / pageSize);
 
-const paginatedUsers = showAllUsers
-  ? filteredUsers
-  : filteredUsers.slice(
-      (currentPage - 1) * pageSize,
-      currentPage * pageSize
-    );
+  const paginatedUsers = showAllUsers
+    ? filteredUsers
+    : filteredUsers.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      );
 
-const firstUserNumber =
-  filteredUsers.length === 0
-    ? 0
-    : showAllUsers
-      ? 1
-      : (currentPage - 1) * pageSize + 1;
+  const firstUserNumber =
+    filteredUsers.length === 0
+      ? 0
+      : showAllUsers
+        ? 1
+        : (currentPage - 1) * pageSize + 1;
 
-const lastUserNumber = showAllUsers
-  ? filteredUsers.length
-  : Math.min(currentPage * pageSize, filteredUsers.length);
+  const lastUserNumber = showAllUsers
+    ? filteredUsers.length
+    : Math.min(currentPage * pageSize, filteredUsers.length);
 
   // Keep the page valid when search results or user count changes.
   useEffect(() => {
@@ -755,95 +832,389 @@ const lastUserNumber = showAllUsers
       {/* Admin-only authorized-user management */}
       {isAdmin && (
         <>
-          {/* CSV upload and Add User */}
+          {/* Authorized-user actions */}
           <div className="card mb-4">
-            <div className="card-header">
+            <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
               <h5 className="mb-0">
                 📥 Import and Manage Authorized Users
               </h5>
+
+              <div className="dropdown">
+                <button
+                  type="button"
+                  className="btn btn-success dropdown-toggle"
+                  onClick={() => setShowAddMenu((previous) => !previous)}
+                  aria-expanded={showAddMenu}
+                >
+                  <i className="bi bi-person-plus me-1"></i>
+                  Add User
+                </button>
+
+                {showAddMenu && (
+                  <div
+                    className="dropdown-menu show"
+                    style={{
+                      right: 0,
+                      left: 'auto',
+                      minWidth: '210px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => openAdminModal('add')}
+                    >
+                      <i className="bi bi-person-plus me-2"></i>
+                      Add Single User
+                    </button>
+
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => openAdminModal('upload')}
+                    >
+                      <i className="bi bi-file-earmark-arrow-up me-2"></i>
+                      Upload Users CSV
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="card-body">
-              <p className="text-muted">
+              <p className="text-muted mb-0">
                 Import users approved by the university or add an
                 authorized user manually. These records are used to
                 verify users during registration.
               </p>
-
-              <div className="d-flex flex-wrap align-items-end gap-3">
-                <div>
-                  <label className="form-label d-block">
-                    Add a user manually
-                  </label>
-                  <button
-                    type="button"
-                    className="btn btn-success"
-                    onClick={() =>
-                      setShowAddAuthorizedForm((previous) => !previous)
-                    }
-                  >
-                    <i className="bi bi-person-plus me-1"></i>
-                    {showAddAuthorizedForm
-                      ? 'Close Add User'
-                      : 'Add User'}
-                  </button>
-                </div>
-
-                <form
-                  onSubmit={handleCSVUpload}
-                  className="flex-grow-1"
-                >
-                  <label
-                    htmlFor="authorized-users-csv"
-                    className="form-label"
-                  >
-                    Upload authorized users CSV
-                  </label>
-
-                  <div className="d-flex flex-wrap gap-2">
-                    <input
-                      id="authorized-users-csv"
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="form-control"
-                      style={{ maxWidth: '420px' }}
-                      onChange={(event) =>
-                        setCsvFile(event.target.files?.[0] || null)
-                      }
-                      disabled={csvUploading}
-                    />
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      disabled={!csvFile || csvUploading}
-                    >
-                      {csvUploading ? (
-                        <>
-                          <span
-                            className="spinner-border spinner-border-sm me-2"
-                            role="status"
-                          ></span>
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <i className="bi bi-upload me-1"></i>
-                          Upload CSV
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <small className="text-muted d-block mt-3">
-                Required CSV columns: student_id, first_name,
-                last_name, email. Optional columns: phone, department,
-                role.
-              </small>
             </div>
           </div>
+
+          {/* Add Single User / Upload CSV modal */}
+          {activeAdminModal && (
+            <div
+              className="modal d-block"
+              tabIndex="-1"
+              role="dialog"
+              aria-modal="true"
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.55)',
+                zIndex: 1055,
+              }}
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  closeAdminModal();
+                }
+              }}
+            >
+              <div
+                className="modal-dialog modal-dialog-centered modal-lg"
+                role="document"
+              >
+                <div className="modal-content shadow-lg">
+                  <div className="modal-header">
+                    <h5 className="modal-title">
+                      {activeAdminModal === 'add'
+                        ? 'Add Authorized User'
+                        : 'Upload Authorized Users CSV'}
+                    </h5>
+
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Close"
+                      onClick={closeAdminModal}
+                      disabled={authorizedSaving || csvUploading}
+                    ></button>
+                  </div>
+
+                  {/* Add Single User */}
+                  {activeAdminModal === 'add' && (
+                    <form onSubmit={handleAddAuthorizedUser}>
+                      <div className="modal-body">
+                        <p className="text-muted">
+                          Enter the user's university information. Required
+                          fields are marked with an asterisk (*).
+                        </p>
+
+                        <div className="row g-3">
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-student-id"
+                              className="form-label"
+                            >
+                              Student / Staff ID *
+                            </label>
+                            <input
+                              id="authorized-student-id"
+                              name="student_id"
+                              type="text"
+                              className="form-control"
+                              value={authorizedForm.student_id}
+                              onChange={handleAuthorizedFormChange}
+                              required
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-first-name"
+                              className="form-label"
+                            >
+                              First Name *
+                            </label>
+                            <input
+                              id="authorized-first-name"
+                              name="first_name"
+                              type="text"
+                              className="form-control"
+                              value={authorizedForm.first_name}
+                              onChange={handleAuthorizedFormChange}
+                              required
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-last-name"
+                              className="form-label"
+                            >
+                              Last Name *
+                            </label>
+                            <input
+                              id="authorized-last-name"
+                              name="last_name"
+                              type="text"
+                              className="form-control"
+                              value={authorizedForm.last_name}
+                              onChange={handleAuthorizedFormChange}
+                              required
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-email"
+                              className="form-label"
+                            >
+                              Email *
+                            </label>
+                            <input
+                              id="authorized-email"
+                              name="email"
+                              type="email"
+                              className="form-control"
+                              value={authorizedForm.email}
+                              onChange={handleAuthorizedFormChange}
+                              required
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-phone"
+                              className="form-label"
+                            >
+                              Phone
+                            </label>
+                            <input
+                              id="authorized-phone"
+                              name="phone"
+                              type="tel"
+                              className="form-control"
+                              value={authorizedForm.phone}
+                              onChange={handleAuthorizedFormChange}
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-department"
+                              className="form-label"
+                            >
+                              Department
+                            </label>
+                            <input
+                              id="authorized-department"
+                              name="department"
+                              type="text"
+                              className="form-control"
+                              value={authorizedForm.department}
+                              onChange={handleAuthorizedFormChange}
+                              disabled={authorizedSaving}
+                            />
+                          </div>
+
+                          <div className="col-md-6">
+                            <label
+                              htmlFor="authorized-role"
+                              className="form-label"
+                            >
+                              Role
+                            </label>
+                            <select
+                              id="authorized-role"
+                              name="role"
+                              className="form-select"
+                              value={authorizedForm.role}
+                              onChange={handleAuthorizedFormChange}
+                              disabled={authorizedSaving}
+                            >
+                              {AUTHORIZED_ROLES.map((role) => (
+                                <option key={role.value} value={role.value}>
+                                  {role.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="modal-footer">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={closeAdminModal}
+                          disabled={authorizedSaving}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="submit"
+                          className="btn btn-success"
+                          disabled={authorizedSaving}
+                        >
+                          {authorizedSaving ? (
+                            <>
+                              <span
+                                className="spinner-border spinner-border-sm me-2"
+                                role="status"
+                              ></span>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-person-check me-1"></i>
+                              Save Authorized User
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Upload Users CSV */}
+                  {activeAdminModal === 'upload' && (
+                    <form onSubmit={handleCSVUpload}>
+                      <div className="modal-body">
+                        <p className="text-muted">
+                          Upload a CSV file containing the university's
+                          authorized students and staff.
+                        </p>
+
+                        <div className="mb-4">
+                          <button
+                            type="button"
+                            className="btn btn-outline-success"
+                            onClick={handleDownloadCSVTemplate}
+                          >
+                            <i className="bi bi-download me-2"></i>
+                            Download CSV Template
+                          </button>
+                        </div>
+
+                        <div className="mb-3">
+                          <label
+                            htmlFor="authorized-users-csv"
+                            className="form-label"
+                          >
+                            Select CSV File *
+                          </label>
+
+                          <input
+                            id="authorized-users-csv"
+                            type="file"
+                            accept=".csv,text/csv"
+                            className="form-control"
+                            onChange={(event) =>
+                              setCsvFile(event.target.files?.[0] || null)
+                            }
+                            disabled={csvUploading}
+                            required
+                          />
+                        </div>
+
+                        {csvFile && (
+                          <div className="alert alert-info py-2">
+                            <i className="bi bi-file-earmark-spreadsheet me-2"></i>
+                            Selected file: <strong>{csvFile.name}</strong>
+                          </div>
+                        )}
+
+                        <div className="alert alert-light border mb-0">
+                          <strong>CSV format requirements</strong>
+                          <p className="mb-1 mt-2">
+                            Required columns:
+                          </p>
+                          <code>
+                            student_id, first_name, last_name, email
+                          </code>
+
+                          <p className="mb-1 mt-3">
+                            Optional columns:
+                          </p>
+                          <code>phone, department, role</code>
+
+                          <p className="small text-muted mt-2 mb-0">
+                            Supported roles: student, academic_staff,
+                            digital_officer, librarian.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="modal-footer">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={closeAdminModal}
+                          disabled={csvUploading}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={!csvFile || csvUploading}
+                        >
+                          {csvUploading ? (
+                            <>
+                              <span
+                                className="spinner-border spinner-border-sm me-2"
+                                role="status"
+                              ></span>
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-upload me-1"></i>
+                              Upload CSV
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* CSV import results */}
           {csvResults &&
@@ -887,173 +1258,6 @@ const lastUserNumber = showAllUsers
               </div>
             )}
 
-          {/* Add authorized-user form */}
-          {showAddAuthorizedForm && (
-            <div className="card mb-4">
-              <div className="card-header">
-                <h5 className="mb-0">Add Authorized User</h5>
-              </div>
-
-              <div className="card-body">
-                <form onSubmit={handleAddAuthorizedUser}>
-                  <div className="row g-3">
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-student-id"
-                        className="form-label"
-                      >
-                        Student / Staff ID *
-                      </label>
-                      <input
-                        id="authorized-student-id"
-                        name="student_id"
-                        type="text"
-                        className="form-control"
-                        value={authorizedForm.student_id}
-                        onChange={handleAuthorizedFormChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-first-name"
-                        className="form-label"
-                      >
-                        First Name *
-                      </label>
-                      <input
-                        id="authorized-first-name"
-                        name="first_name"
-                        type="text"
-                        className="form-control"
-                        value={authorizedForm.first_name}
-                        onChange={handleAuthorizedFormChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-last-name"
-                        className="form-label"
-                      >
-                        Last Name *
-                      </label>
-                      <input
-                        id="authorized-last-name"
-                        name="last_name"
-                        type="text"
-                        className="form-control"
-                        value={authorizedForm.last_name}
-                        onChange={handleAuthorizedFormChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-email"
-                        className="form-label"
-                      >
-                        Email *
-                      </label>
-                      <input
-                        id="authorized-email"
-                        name="email"
-                        type="email"
-                        className="form-control"
-                        value={authorizedForm.email}
-                        onChange={handleAuthorizedFormChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-phone"
-                        className="form-label"
-                      >
-                        Phone
-                      </label>
-                      <input
-                        id="authorized-phone"
-                        name="phone"
-                        type="tel"
-                        className="form-control"
-                        value={authorizedForm.phone}
-                        onChange={handleAuthorizedFormChange}
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-department"
-                        className="form-label"
-                      >
-                        Department
-                      </label>
-                      <input
-                        id="authorized-department"
-                        name="department"
-                        type="text"
-                        className="form-control"
-                        value={authorizedForm.department}
-                        onChange={handleAuthorizedFormChange}
-                      />
-                    </div>
-
-                    <div className="col-md-4">
-                      <label
-                        htmlFor="authorized-role"
-                        className="form-label"
-                      >
-                        Role
-                      </label>
-                      <select
-                        id="authorized-role"
-                        name="role"
-                        className="form-select"
-                        value={authorizedForm.role}
-                        onChange={handleAuthorizedFormChange}
-                      >
-                        {AUTHORIZED_ROLES.map((role) => (
-                          <option key={role.value} value={role.value}>
-                            {role.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="d-flex gap-2 mt-4">
-                    <button
-                      type="submit"
-                      className="btn btn-success"
-                      disabled={authorizedSaving}
-                    >
-                      {authorizedSaving
-                        ? 'Saving...'
-                        : 'Save Authorized User'}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      disabled={authorizedSaving}
-                      onClick={() => {
-                        setShowAddAuthorizedForm(false);
-                        setAuthorizedForm({ ...EMPTY_AUTHORIZED_FORM });
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
           {/* Authorized users table */}
           <div className="card mb-4">
             <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -1086,12 +1290,13 @@ const lastUserNumber = showAllUsers
                 login accounts.
               </p>
 
-
+              {/* Edit authorized user */}
               {editingAuthorizedUser && (
                 <div className="card border-primary mb-4">
                   <div className="card-header">
                     <strong>Edit Authorized User</strong>
                   </div>
+
                   <div className="card-body">
                     <form onSubmit={handleSaveAuthorizedUser}>
                       <div className="row g-3">
@@ -1110,6 +1315,7 @@ const lastUserNumber = showAllUsers
                             >
                               {label}
                             </label>
+
                             <input
                               id={`edit-authorized-${name}`}
                               name={name}
@@ -1134,6 +1340,7 @@ const lastUserNumber = showAllUsers
                           >
                             Role
                           </label>
+
                           <select
                             id="edit-authorized-role"
                             name="role"
@@ -1157,6 +1364,7 @@ const lastUserNumber = showAllUsers
                           >
                             Authorization Status
                           </label>
+
                           <select
                             id="edit-authorized-status"
                             name="is_authorized"
@@ -1188,6 +1396,7 @@ const lastUserNumber = showAllUsers
                             ? 'Saving...'
                             : 'Save Changes'}
                         </button>
+
                         <button
                           type="button"
                           className="btn btn-secondary"
@@ -1202,20 +1411,23 @@ const lastUserNumber = showAllUsers
                 </div>
               )}
 
-
-              <div className="input-group mb-3" style={{ maxWidth: '100%' }}>
+              {/* Authorized-user search */}
+              <div className="input-group mb-3">
                 <span className="input-group-text">
                   <i className="bi bi-search" aria-hidden="true"></i>
-                  </span>
-                  <input
+                </span>
+
+                <input
                   type="search"
                   className="form-control"
                   placeholder="Search by ID, name, email, phone, department, or role..."
                   aria-label="Search authorized users"
                   value={authorizedSearch}
-                  onChange={(event) => setAuthorizedSearch(event.target.value)}
-                  />
-                  </div>
+                  onChange={(event) =>
+                    setAuthorizedSearch(event.target.value)
+                  }
+                />
+              </div>
 
               {authorizedLoading ? (
                 <div className="text-center py-4">
@@ -1237,7 +1449,7 @@ const lastUserNumber = showAllUsers
                         <th>Department</th>
                         <th>Role</th>
                         <th>Authorized</th>
-                        <th> Actions</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
 
@@ -1250,11 +1462,13 @@ const lastUserNumber = showAllUsers
                           <td>{item.email || 'N/A'}</td>
                           <td>{item.phone || 'N/A'}</td>
                           <td>{item.department || 'N/A'}</td>
+
                           <td>
                             {AUTHORIZED_ROLES.find(
                               (role) => role.value === item.role
                             )?.label || item.role || 'N/A'}
                           </td>
+
                           <td>
                             <span
                               className={`badge ${
@@ -1267,35 +1481,31 @@ const lastUserNumber = showAllUsers
                             </span>
                           </td>
 
-
                           <td>
                             <div className="d-flex flex-wrap gap-2">
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-primary"
-                                onClick={() => handleEditAuthorizedUser(item)}
+                                onClick={() =>
+                                  handleEditAuthorizedUser(item)
+                                }
                               >
-                                <i
-                                  className="bi bi-pencil-square me-1"
-                                  aria-hidden="true"
-                                ></i>
+                                <i className="bi bi-pencil-square me-1"></i>
                                 Edit
                               </button>
 
                               <button
                                 type="button"
                                 className="btn btn-sm btn-outline-danger"
-                                onClick={() => handleDeleteAuthorizedUser(item)}
+                                onClick={() =>
+                                  handleDeleteAuthorizedUser(item)
+                                }
                               >
-                                <i
-                                  className="bi bi-trash me-1"
-                                  aria-hidden="true"
-                                ></i>
+                                <i className="bi bi-trash me-1"></i>
                                 Delete
                               </button>
                             </div>
                           </td>
-
                         </tr>
                       ))}
 
@@ -1336,80 +1546,79 @@ const lastUserNumber = showAllUsers
             verification process.
           </p>
 
+          {/* Edit registered user */}
+          {editingRegisteredUser && (
+            <div className="card shadow-sm mb-4">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  Edit User: {editingRegisteredUser.username}
+                </h5>
 
-{editingRegisteredUser && (
-  <div className="card shadow-sm mb-4">
-    <div className="card-header d-flex justify-content-between align-items-center">
-      <h5 className="mb-0">
-        Edit User: {editingRegisteredUser.username}
-      </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="Close"
+                  onClick={() => setEditingRegisteredUser(null)}
+                  disabled={savingRegisteredUser}
+                />
+              </div>
 
-      <button
-        type="button"
-        className="btn-close"
-        aria-label="Close"
-        onClick={() => setEditingRegisteredUser(null)}
-        disabled={savingRegisteredUser}
-      />
-    </div>
+              <div className="card-body">
+                <form onSubmit={handleSaveRegisteredUser}>
+                  <div className="row g-3">
+                    {[
+                      { name: 'first_name', label: 'First Name' },
+                      { name: 'last_name', label: 'Last Name' },
+                      { name: 'email', label: 'Email', type: 'email' },
+                      { name: 'phone', label: 'Phone Number' },
+                      { name: 'department', label: 'Department' },
+                    ].map((field) => (
+                      <div className="col-md-6" key={field.name}>
+                        <label
+                          htmlFor={`registered-${field.name}`}
+                          className="form-label"
+                        >
+                          {field.label}
+                        </label>
 
-    <div className="card-body">
-      <form onSubmit={handleSaveRegisteredUser}>
-        <div className="row g-3">
-          {[
-            { name: 'first_name', label: 'First Name' },
-            { name: 'last_name', label: 'Last Name' },
-            { name: 'email', label: 'Email', type: 'email' },
-            { name: 'phone', label: 'Phone Number' },
-            { name: 'department', label: 'Department' },
-          ].map((field) => (
-            <div className="col-md-6" key={field.name}>
-              <label
-                htmlFor={`registered-${field.name}`}
-                className="form-label"
-              >
-                {field.label}
-              </label>
+                        <input
+                          id={`registered-${field.name}`}
+                          type={field.type || 'text'}
+                          name={field.name}
+                          className="form-control"
+                          value={registeredUserForm[field.name]}
+                          onChange={handleRegisteredUserFormChange}
+                          required={field.name === 'email'}
+                          disabled={savingRegisteredUser}
+                        />
+                      </div>
+                    ))}
+                  </div>
 
-              <input
-                id={`registered-${field.name}`}
-                type={field.type || 'text'}
-                name={field.name}
-                className="form-control"
-                value={registeredUserForm[field.name]}
-                onChange={handleRegisteredUserFormChange}
-                required={field.name === 'email'}
-                disabled={savingRegisteredUser}
-              />
+                  <div className="mt-4 d-flex gap-2">
+                    <button
+                      type="submit"
+                      className="btn btn-success"
+                      disabled={savingRegisteredUser}
+                    >
+                      {savingRegisteredUser ? 'Saving...' : 'Save Changes'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setEditingRegisteredUser(null)}
+                      disabled={savingRegisteredUser}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
 
-        <div className="mt-4 d-flex gap-2">
-          <button
-            type="submit"
-            className="btn btn-success"
-            disabled={savingRegisteredUser}
-          >
-            {savingRegisteredUser ? 'Saving...' : 'Save Changes'}
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setEditingRegisteredUser(null)}
-            disabled={savingRegisteredUser}
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
-
-
-          {/* Search and pagination side by side */}
+          {/* Search and pagination */}
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
             <div
               className="flex-grow-1"
@@ -1418,8 +1627,9 @@ const lastUserNumber = showAllUsers
               <div className="input-group">
                 <span className="input-group-text">
                   <i className="bi bi-search" aria-hidden="true"></i>
-                  </span>
-                  <input
+                </span>
+
+                <input
                   type="search"
                   className="form-control"
                   placeholder="Search by username, name, email, role, department, or status..."
@@ -1429,8 +1639,8 @@ const lastUserNumber = showAllUsers
                     setUserSearch(event.target.value);
                     setCurrentPage(1);
                   }}
-                  />
-                  </div>
+                />
+              </div>
             </div>
 
             <div className="d-flex flex-wrap align-items-center gap-2">
@@ -1529,6 +1739,14 @@ const lastUserNumber = showAllUsers
             </div>
           </div>
 
+          {/* User range */}
+          {filteredUsers.length > 0 && (
+            <p className="text-muted small mb-3">
+              Showing {firstUserNumber}–{lastUserNumber} of{' '}
+              {filteredUsers.length} users
+            </p>
+          )}
+
           {filteredUsers.length === 0 ? (
             <div className="text-center py-5 bg-light rounded">
               <div style={{ fontSize: '4rem' }}>👥</div>
@@ -1624,63 +1842,69 @@ const lastUserNumber = showAllUsers
                         </span>
                       </td>
 
-                      <td >
+                      <td>
                         <div className="d-flex flex-row flex-wrap align-items-center gap-2">
-
                           {/* Activate / Deactivate */}
                           <button
-                          type="button"
-                          className={`btn btn-sm ${
-                            userItem.is_active !== false
-                            ? 'btn-warning'
-                            : 'btn-success'
-                          }`}
-                          onClick={() => handleToggleActive(userItem.id)}
-                          title={
-                            userItem.is_active !== false
-                            ? 'Deactivate'
-                            : 'Activate'
-                          }
-                          disabled={
-                            userItem.id === user.id ||
-                            user?.role !== 'admin'
-                          }
+                            type="button"
+                            className={`btn btn-sm ${
+                              userItem.is_active !== false
+                                ? 'btn-warning'
+                                : 'btn-success'
+                            }`}
+                            onClick={() =>
+                              handleToggleActive(userItem.id)
+                            }
+                            title={
+                              userItem.is_active !== false
+                                ? 'Deactivate'
+                                : 'Activate'
+                            }
+                            disabled={
+                              userItem.id === user.id ||
+                              user?.role !== 'admin'
+                            }
                           >
                             {userItem.is_active !== false
-                            ? 'Deactivate'
-                            : 'Activate'}
-                            </button>
+                              ? 'Deactivate'
+                              : 'Activate'}
+                          </button>
 
-                            {/* Edit */}
-                            <button
+                          {/* Edit */}
+                          <button
                             type="button"
                             className="btn btn-sm btn-primary"
-                            onClick={() => handleEditRegisteredUser(userItem)}
+                            onClick={() =>
+                              handleEditRegisteredUser(userItem)
+                            }
                             disabled={user?.role !== 'admin'}
                             title="Edit user details"
-                            >
-                              <i className="bi bi-pencil-square me-1"></i>
-                              Edit
-                              </button>
+                          >
+                            <i className="bi bi-pencil-square me-1"></i>
+                            Edit
+                          </button>
 
-                              {/* Delete */}
-                              <button
-                              type="button"
-                              className="btn btn-sm btn-danger"
-                              onClick={() =>
-                                handleDeleteUser(userItem.id, userItem.username)
-                              }
-                              title="Delete user"
-                              disabled={
-                                userItem.id === user.id ||
-                                user?.role !== 'admin'
-                              }
-                              >
-                                <i className="bi bi-trash me-1"></i>
-                                Delete
-                                </button>
-                                </div>
-                                </td>
+                          {/* Deactivate account while preserving history */}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            onClick={() =>
+                              handleDeleteUser(
+                                userItem.id,
+                                userItem.username
+                              )
+                            }
+                            title="Deactivate user"
+                            disabled={
+                              userItem.id === user.id ||
+                              user?.role !== 'admin'
+                            }
+                          >
+                            <i className="bi bi-trash me-1"></i>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

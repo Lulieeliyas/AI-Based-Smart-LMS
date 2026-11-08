@@ -1,5 +1,6 @@
 import os
 import mimetypes
+import resource
 
 from django.db.models import F, Q
 from django.http import FileResponse, Http404, HttpResponseRedirect
@@ -18,7 +19,7 @@ from .serializers import (
     DigitalResourceSerializer,
     DigitalResourceListSerializer,
 )
-
+from apps.notifications.services import NotificationService
 
 def is_digital_officer(user):
     if not user or not user.is_authenticated:
@@ -193,16 +194,37 @@ class DigitalResourceListCreateView(generics.ListCreateAPIView):
 
         return queryset
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        is_officer = is_digital_officer(user)
-        initial_status = "verified" if is_officer else "pending"
-        serializer.save(
+        def perform_create(self, serializer):
+            user = self.request.user
+            is_officer = is_digital_officer(user)
+            initial_status = "verified" if is_officer else "pending"
+
+            resource = serializer.save(
             uploaded_by=user,
             quality_status=initial_status,
             verified_by=user if is_officer else None,
             verified_at=timezone.now() if is_officer else None,
         )
+
+        NotificationService.notify_digital_officers_resource_event(
+            resource=resource,
+            event='added',
+        )
+
+        def perform_update(self, serializer):
+            resource = serializer.save()
+
+            NotificationService.notify_digital_officers_resource_event(
+            resource=resource,
+            event='updated',
+        )
+
+    def perform_destroy(self, instance):
+        NotificationService.notify_digital_officers_resource_event(
+            resource=instance,
+            event='deleted',
+        )
+        instance.delete()
 
 
 class DigitalResourceDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -378,6 +400,10 @@ class DigitalResourceVerifyView(APIView):
             resource.quality_notes = notes
 
         resource.save()
+        NotificationService.notify_digital_officers_resource_event(
+            resource=resource,
+            event='status',
+        )
 
         return Response({
             "message": f"Resource status updated to {quality_status}.",
@@ -409,6 +435,10 @@ class DigitalResourcePublishView(APIView):
             message = "Resource returned to pending review."
 
         resource.save()
+        NotificationService.notify_digital_officers_resource_event(
+            resource=resource,
+            event='status',
+        )
 
         return Response({
             "message": message,

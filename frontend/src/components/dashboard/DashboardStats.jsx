@@ -1,76 +1,136 @@
+
 import React from 'react';
 
 const DashboardStats = ({ stats }) => {
-  // Loading state
-  if (!stats) {
+    if (!stats) return null;
+
+    const statCards = [
+        {
+            label: 'Total Books',
+            description: 'Total book copies',
+            value: stats.total_books,
+            icon: 'bi-book',
+            color: 'blue',
+        },
+        {
+            label: 'Available Books',
+            description: 'Copies available to borrow',
+            value: stats.available_books,
+            icon: 'bi-book-half',
+            color: 'green',
+        },
+        {
+            label: 'Borrowed Books',
+            description: 'Currently on loan',
+            value: stats.borrowed_books,
+            icon: 'bi-journal-arrow-up',
+            color: 'teal',
+        },
+        {
+            label: 'Overdue Books',
+            description: 'Past their due date',
+            value: stats.overdue_books,
+            icon: 'bi-exclamation-circle',
+            color: 'red',
+        },
+        {
+            label: 'Total Borrowings',
+            description: 'All borrowing records',
+            value: stats.total_borrowings,
+            icon: 'bi-arrow-left-right',
+            color: 'purple',
+        },
+        {
+            label: 'Active Users',
+            description: 'Enabled user accounts',
+            value: stats.active_users,
+            icon: 'bi-people',
+            color: 'blue',
+        },
+        {
+            label: 'Book Categories',
+            description: 'Available categories',
+            value: stats.total_categories,
+            icon: 'bi-grid',
+            color: 'orange',
+        },
+        {
+            label: 'Digital Resources',
+            description: 'Digital library collection',
+            value: stats.total_digital_resources,
+            icon: 'bi-file-earmark-pdf',
+            color: 'teal',
+        },
+    ];
+
+    const formatNumber = (value) =>
+        Number(value ?? 0).toLocaleString();
+
     return (
-      <div className="row g-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="col-md-3 col-6">
-            <div className="card bg-light">
-              <div className="card-body text-center py-4">
-                <div className="spinner-border spinner-border-sm text-primary"></div>
-              </div>
+        <section className="admin-stats-section">
+            <div className="admin-section-heading">
+                <div>
+                    <h4>Library Overview</h4>
+                    <p>Current statistics from your library database</p>
+                </div>
+                <span className="admin-live-indicator">
+                    <span />
+                    Live data
+                </span>
             </div>
-          </div>
-        ))}
-      </div>
+
+            <div className="admin-stats-grid">
+                {statCards.map((stat) => (
+                    <article
+                        className={`admin-stat-card stat-${stat.color}`}
+                        key={stat.label}
+                    >
+                        <div className="admin-stat-top">
+                            <div className="admin-stat-icon">
+                                <i className={`bi ${stat.icon}`} />
+                            </div>
+                            <span className="admin-stat-indicator">
+                                <i className="bi bi-graph-up-arrow" />
+                            </span>
+                        </div>
+
+                        <div className="admin-stat-value">
+                            {formatNumber(stat.value)}
+                        </div>
+
+                        <div className="admin-stat-label">
+                            {stat.label}
+                        </div>
+
+                        <p className="admin-stat-description">
+                            {stat.description}
+                        </p>
+                    </article>
+                ))}
+            </div>
+
+            {Number(stats.total_fines ?? 0) > 0 && (
+                <div className="admin-fines-summary">
+                    <div className="admin-fines-icon">
+                        <i className="bi bi-cash-coin" />
+                    </div>
+                    <div>
+                        <strong>Outstanding Fines</strong>
+                        <p>Unpaid and partially paid fine balances</p>
+                    </div>
+                    <strong className="admin-fines-amount">
+                        ETB {Number(stats.total_fines).toLocaleString(
+                            undefined,
+                            {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            }
+                        )}
+                    </strong>
+                </div>
+            )}
+        </section>
     );
-  }
-
-  // Map the real data to the cards
-  const statCards = [
-    {
-      label: 'Total Borrowed',
-      value: stats.totalBorrowings || 0,
-      icon: '📚',
-      color: 'primary'
-    },
-    {
-      label: 'Active',
-      value: stats.borrowedBooks || 0,
-      icon: '📖',
-      color: 'success'
-    },
-    {
-      label: 'Overdue',
-      value: stats.overdueBooks || 0,
-      icon: '⚠️',
-      color: 'danger'
-    },
-    {
-      label: 'Returned',
-      value: stats.returnedBorrowings || 0,
-      icon: '✅',
-      color: 'info'
-    }
-  ];
-
-  return (
-    <div className="row g-3">
-      {statCards.map((stat, index) => (
-        <div key={index} className="col-md-3 col-6">
-          <div className={`card bg-${stat.color} text-white h-100`}>
-            <div className="card-body text-center py-3">
-              <div style={{ fontSize: '2rem' }}>{stat.icon}</div>
-              <h3 className="mb-0">{stat.value}</h3>
-              <small>{stat.label}</small>
-            </div>
-          </div>
-        </div>
-      ))}
-      
-      {/* Fine Amount Alert */}
-      {stats.total_fines > 0 && (
-        <div className="col-12 mt-2">
-          <div className="alert alert-warning mb-0">
-            <i className="bi bi-exclamation-triangle me-2"></i>
-            <strong>Outstanding Fine:</strong> ${stats.total_fines}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 };
 
 export default DashboardStats;

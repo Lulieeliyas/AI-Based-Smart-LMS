@@ -316,13 +316,6 @@ class FineExtensionRequest(models.Model):
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["requested_by", "status"]),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["fine"],
-                condition=models.Q(status="pending"),
-                name="unique_pending_extension_per_fine",
-            ),
-        ]
 
     def __str__(self):
         return f"Extension request #{self.pk} - {self.status}"

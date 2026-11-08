@@ -130,29 +130,43 @@ export const AuthProvider = ({ children }) => {
         requiresVerification: data.requires_verification ?? true,
         message: data.message,
       };
+
     } catch (error) {
+      console.error('Registration error:', {
+        status: error.response?.status,
+        response: error.response?.data,
+        message: error.message,
+      });
+
       let errorMsg = 'Registration failed. Please try again.';
       let errorObj = {};
 
       if (error.response) {
-        if (error.response.data) {
-          if (typeof error.response.data === 'object') {
-            const data = error.response.data;
-            if (data.detail) {
-              errorMsg = data.detail;
-            } else if (data.message) {
-              errorMsg = data.message;
-            } else if (data.non_field_errors) {
-              errorMsg = data.non_field_errors.join(', ');
-            } else {
-              Object.keys(data).forEach((key) => {
-                errorObj[key] = Array.isArray(data[key]) ? data[key][0] : data[key];
-              });
-              return { success: false, error: errorObj };
-            }
+        const { status, data } = error.response;
+
+        if (status >= 500) {
+          errorMsg =
+            data?.detail ||
+            data?.message ||
+            'The server encountered an error while processing registration. Please try again later.';
+        } else if (typeof data === 'object' && data !== null) {
+          if (data.detail) {
+            errorMsg = data.detail;
+          } else if (data.message) {
+            errorMsg = data.message;
+          } else if (data.non_field_errors) {
+            errorMsg = data.non_field_errors.join(', ');
           } else {
-            errorMsg = error.response.data;
+            Object.keys(data).forEach((key) => {
+              errorObj[key] = Array.isArray(data[key])
+                ? data[key][0]
+                : data[key];
+            });
+
+            return { success: false, error: errorObj };
           }
+        } else {
+          errorMsg = data || errorMsg;
         }
       } else if (error.request) {
         errorMsg = 'Network error. Please check your connection.';
