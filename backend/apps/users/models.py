@@ -96,7 +96,9 @@ class User(AbstractUser):
         full_name = f"{self.first_name} {self.last_name}".strip()
         return full_name or self.username
 
+
     def get_active_borrowings_count(self):
+        """Count books currently issued or still being returned."""
         from apps.borrowing.models import BorrowRecord
 
         return BorrowRecord.objects.filter(
@@ -104,14 +106,34 @@ class User(AbstractUser):
             status__in=[
                 BorrowRecord.Status.ISSUED,
                 BorrowRecord.Status.OVERDUE,
+                BorrowRecord.Status.RETURN_REQUESTED,
+                BorrowRecord.Status.AWAITING_PAYMENT,
+                BorrowRecord.Status.READY_TO_RETURN,
+            ],
+        ).count()
+
+    def get_borrowing_limit_count(self):
+        """Count active books plus pending requests."""
+        from apps.borrowing.models import BorrowRecord
+
+        return BorrowRecord.objects.filter(
+            user=self,
+            status__in=[
+                BorrowRecord.Status.PENDING,
+                BorrowRecord.Status.ISSUED,
+                BorrowRecord.Status.OVERDUE,
+                BorrowRecord.Status.RETURN_REQUESTED,
+                BorrowRecord.Status.AWAITING_PAYMENT,
+                BorrowRecord.Status.READY_TO_RETURN,
             ],
         ).count()
 
     def can_borrow(self):
         return (
-            self.get_active_borrowings_count()
+            self.get_borrowing_limit_count()
             < self.max_books_allowed
         )
+
 
     def is_approved_member(self):
         return (
@@ -154,17 +176,17 @@ class EmailVerification(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
-    
+
     def save(self, *args, **kwargs):
         if not self.expires_at:
-            
+
             self.expires_at = (
                 timezone.now()
                 + timezone.timedelta(
                     minutes=settings.OTP_EXPIRY_MINUTES
                     )
                     )
-            
+
         super().save(*args, **kwargs)
 
 

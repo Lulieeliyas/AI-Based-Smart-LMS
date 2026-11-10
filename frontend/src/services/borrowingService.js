@@ -1,85 +1,108 @@
+
 import apiClient from './apiClient';
 
+const BASE_URL = '/borrowing/borrows';
+
 const borrowingService = {
-  // 👤 User endpoints
-  getMyBorrowings: () => {
-  return apiClient.get('/borrowing/borrows/');
-},
+  // Student borrowing
+  getMyBorrowings: () => apiClient.get(`${BASE_URL}/`),
 
-    // ✅ Check if user can borrow
-  canBorrow: () => {
-    return apiClient.get('/borrowing/borrows/can-borrow/');
-  },
+  canBorrow: () => apiClient.get(`${BASE_URL}/can-borrow/`),
 
-  borrowBook: (bookId) => {
-    return apiClient.post('/borrowing/borrows/issue/', {
+  borrowBook: (bookId, borrowData = {}) =>
+    apiClient.post(`${BASE_URL}/issue/`, {
+      ...borrowData,
       book_id: bookId,
-    });
-  },
+    }),
 
-  returnBook: (borrowingId) => {
-    return apiClient.post(
-      `/borrowing/borrows/${borrowingId}/return/`
-    );
-  },
-  
-  renewBorrowing: (borrowingId) => {
-    return apiClient.put(`/borrowing/borrow/${borrowingId}/renew/`);
-  },
-  
-    // ✅ Damage/Loss reporting
-  reportDamage: (borrowingId, data) => {
-    return apiClient.post(`/borrowing/borrow/${borrowingId}/report-damage/`, data);
-  },
+  returnBook: (borrowingId) =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/return/`),
 
-    // ✅ Payment endpoints
-  createPayment: (borrowingId) => {
-    return apiClient.post(`/borrowing/borrow/${borrowingId}/create-payment/`);
-  },
+  // Librarian borrowing management
+  getAllBorrowings: () => apiClient.get(`${BASE_URL}/all/`),
 
+  getBorrowingDetail: (borrowingId) =>
+    apiClient.get(`${BASE_URL}/${borrowingId}/`),
 
-  verifyPayment: (borrowingId, txRef) => {
-    return apiClient.get(`/borrowing/borrow/${borrowingId}/verify-payment/`, {
-      params: { tx_ref: txRef }
-    });
-  },
-    getPaymentStatus: (borrowingId) => {
-    return apiClient.get(`/borrowing/borrow/${borrowingId}/payment-status/`);
-  },
+  getBorrowingHistory: (borrowingId) =>
+    apiClient.get(`${BASE_URL}/${borrowingId}/`),
 
-  // ✅ ID Verification
-  verifyID: (data) => {
-    return apiClient.post('/borrowing/verify-id/', data);
-  },
-  
+  getActiveBorrowings: () =>
+    apiClient.get(`${BASE_URL}/active/`),
 
-  // 📊 Admin/Librarian endpoints
-  getAllBorrowings: () => {
-    return apiClient.get('/borrowing/borrow/all/');
-  },
-  
-  getBorrowingDetail: (borrowingId) => {
-    return apiClient.get(`/borrowing/borrow/${borrowingId}/detail/`);
-  },
-  
-  getBorrowingHistory: (borrowingId) => {
-    return apiClient.get(`/borrowing/borrow/${borrowingId}/history/`);
-  },
-  
-  getActiveBorrowings: () => {
-    return apiClient.get('/borrowing/borrow/active/');
-  },
-  
-  getOverdueBorrowings: () => {
-    return apiClient.get('/borrowing/borrow/overdue/');
-  },
-  getMyBorrowingStatistics: () => {
-    return apiClient.get('/borrowing/my-statistics/', { _silent: true });
-  },
-  
-  getBorrowingStatistics: () => {
-    return apiClient.get('/borrowing/borrow/statistics/', { _silent: true });
-  },
+  getOverdueBorrowings: () =>
+    apiClient.get(`${BASE_URL}/overdue/`),
+
+  getBorrowingStatistics: () =>
+    apiClient.get(`${BASE_URL}/statistics/`),
+
+  getPendingRequests: () =>
+    apiClient.get(`${BASE_URL}/pending-requests/`),
+
+  getReturnRequests: () =>
+    apiClient.get(`${BASE_URL}/return-requests/`),
+
+  approveBorrowing: (borrowingId) =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/approve/`),
+
+  rejectBorrowing: (borrowingId, reason = '') =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/reject/`, {
+      reason,
+    }),
+
+  // Librarian return inspection
+  inspectReturn: (borrowingId, data) =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/inspect-return/`, {
+      damage_status: data.damage_status,
+      damage_notes: data.damage_notes || '',
+      damage_fine: data.damage_fine ?? '0',
+    }),
+
+  // Librarian verifies payment
+  verifyFinePayment: (borrowingId, transactionReference = '') =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/verify-payment/`, {
+      transaction_reference: transactionReference,
+    }),
+
+  // Librarian confirms final return
+  finalizeReturn: (borrowingId) =>
+    apiClient.post(`${BASE_URL}/${borrowingId}/finalize-return/`),
+
+  // Student statistics
+  getMyBorrowingStatistics: () =>
+    apiClient.get('/borrowing/my-statistics/', {
+      _silent: true,
+    }),
+
+  // Existing compatibility methods.
+  // These older endpoints may need updating separately.
+  renewBorrowing: (borrowingId) =>
+    apiClient.put(`/borrowing/borrow/${borrowingId}/renew/`),
+
+  reportDamage: (borrowingId, data) =>
+    apiClient.post(
+      `/borrowing/borrow/${borrowingId}/report-damage/`,
+      data
+    ),
+
+  createPayment: (borrowingId) =>
+    apiClient.post(
+      `/borrowing/borrow/${borrowingId}/create-payment/`
+    ),
+
+  verifyPayment: (borrowingId, txRef) =>
+    apiClient.get(
+      `/borrowing/borrow/${borrowingId}/verify-payment/`,
+      { params: { tx_ref: txRef } }
+    ),
+
+  getPaymentStatus: (borrowingId) =>
+    apiClient.get(
+      `/borrowing/borrow/${borrowingId}/payment-status/`
+    ),
+
+  verifyID: (data) =>
+    apiClient.post('/borrowing/verify-id/', data),
 };
 
 export default borrowingService;

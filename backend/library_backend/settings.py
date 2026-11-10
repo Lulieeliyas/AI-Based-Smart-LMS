@@ -4,8 +4,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import dj_database_url
-from decimal import Decimal
+from core.constants import DEFAULT_BORROW_DAYS, FINE_PER_DAY
 
+BORROW_DAYS = DEFAULT_BORROW_DAYS
 # Load environment variables
 load_dotenv()
 
@@ -24,7 +25,7 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
 # If ALLOWED_HOSTS is not in .env, it uses the default list below
 ALLOWED_HOSTS = os.getenv(
-    'ALLOWED_HOSTS', 
+    'ALLOWED_HOSTS',
     'localhost,127.0.0.1,testserver,ai-library-backend-u07r.onrender.com,ai-based-smart-lms.vercel.app'
 ).split(',')
 
@@ -70,7 +71,7 @@ ROOT_URLCONF = 'library_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'], 
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -137,21 +138,6 @@ TIME_ZONE = 'Africa/Addis_Ababa'
 USE_I18N = True
 USE_TZ = True
 
-# Borrowing and fine policies
-BORROW_DAYS_STUDENT = int(
-    os.getenv("STUDENT_BORROW_DAYS", os.getenv("BORROW_DAYS", "14"))
-)
-
-BORROW_DAYS_OTHER = int(
-    os.getenv("OTHER_BORROW_DAYS", "30")
-)
-
-# Keep the old setting for compatibility with existing code.
-BORROW_DAYS = BORROW_DAYS_STUDENT
-
-FINE_PER_DAY = Decimal(os.getenv("FINE_PER_DAY", "5"))
-FINE_CURRENCY = "ETB"
-
 # ==========================================
 # STATIC & MEDIA FILES
 # ==========================================
@@ -174,13 +160,13 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Read from Render Environment Variables, fallback to localhost
 env_cors = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
+    "CORS_ALLOWED_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://ai-based-smart-lms.vercel.app"
 )
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in env_cors.split(',') if origin.strip()]
 
 env_csrf = os.getenv(
-    "CSRF_TRUSTED_ORIGINS", 
+    "CSRF_TRUSTED_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://ai-based-smart-lms.vercel.app,https://ai-library-backend-u07r.onrender.com"
 )
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_csrf.split(',') if origin.strip()]
@@ -302,10 +288,10 @@ AI_MODEL_PATH = BASE_DIR / 'models' / 'recommendations'
 AI_CONTENT_WEIGHT = float(os.getenv('AI_CONTENT_WEIGHT', '0.40'))
 AI_COLLAB_WEIGHT = float(os.getenv('AI_COLLAB_WEIGHT', '0.40'))
 AI_POPULARITY_WEIGHT = float(os.getenv('AI_POPULARITY_WEIGHT', '0.20'))
-AI_MIN_USER_ACTIVITIES = 5  
-AI_RECOMMENDATION_LIMIT = 10  
-AI_SIMILARITY_THRESHOLD = 0.3  
-AI_UPDATE_INTERVAL_HOURS = 24  
+AI_MIN_USER_ACTIVITIES = 5
+AI_RECOMMENDATION_LIMIT = 10
+AI_SIMILARITY_THRESHOLD = 0.3
+AI_UPDATE_INTERVAL_HOURS = 24
 
 # ============ EMAIL CONFIGURATION ============
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

@@ -1,133 +1,168 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import AdminDashboard from './AdminDashboard';
-import userService from '../../services/userService';
-import bookService from '../../services/bookService';
-import borrowingService from '../../services/borrowingService';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  
-  // Initialize stats with default 0 values so components don't crash
+  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    students: 0,
-    staff: 0,
     totalBooks: 0,
-    availableBooks: 0,
-    totalBorrowings: 0,
     borrowedBooks: 0,
     overdueBooks: 0,
-    returnedBorrowings: 0,
-    digitalResources: 0,
-    recentActivities: [],
+    availableBooks: 0,
   });
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      setLoading(true);
-      try {
-        // Fetch data from all 3 APIs in parallel
-        const [usersRes, booksRes, borrowStatsRes] = await Promise.allSettled([
-          userService.getUsers(),
-          bookService.getBooks({ page: 1 }),
-          borrowingService.getBorrowingStatistics(),
-        ]);
-
-        // 1. Process Users Data
-        let totalUsers = 0;
-        let students = 0;
-        let staff = 0;
-        
-        if (usersRes.status === 'fulfilled') {
-          const data = usersRes.value.data;
-          // Handle Django pagination (results array + count) OR plain array
-          const userList = data?.results || data || [];
-          totalUsers = data?.count || userList.length;
-          
-          userList.forEach(u => {
-            if (u.role === 'student') students++;
-            if (u.role === 'librarian' || u.role === 'academic_staff') staff++;
-          });
-        }
-
-        // 2. Process Books Data
-        let totalBooks = 0;
-        let availableBooks = 0;
-        if (booksRes.status === 'fulfilled') {
-          const data = booksRes.value.data;
-          const bookList = data?.results || data || [];
-          totalBooks = data?.count || bookList.length;
-          
-          // Check if available_copies > 0
-          availableBooks = bookList.filter(b => (b.available_copies || 0) > 0).length;
-        }
-
-        // 3. Process Borrowing Statistics
-        let totalBorrowings = 0;
-        let activeBorrowings = 0;
-        let overdueBorrowings = 0;
-        let returnedBorrowings = 0;
-
-        if (borrowStatsRes.status === 'fulfilled') {
-          const statsData = borrowStatsRes.value.data || {};
-          totalBorrowings = statsData.total_borrowings || 0;
-          activeBorrowings = statsData.active_borrowings || 0;
-          overdueBorrowings = statsData.overdue_borrowings || 0;
-          returnedBorrowings = statsData.returned_borrowings || 0;
-        }
-
-        // Update state with the real backend numbers
-        setStats({
-          totalUsers,
-          students,
-          staff,
-          totalBooks,
-          availableBooks,
-          totalBorrowings,
-          borrowedBooks: activeBorrowings,
-          overdueBooks: overdueBorrowings,
-          returnedBorrowings,
-          digitalResources: 0, // Update this if you add a digital count service
-          recentActivities: [], // Add real activity logs if you have an endpoint
-        });
-
-      } catch (err) {
-        console.error("Failed to load admin stats:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user?.role === 'admin') {
-      fetchAdminData();
-    } else {
+    setLoading(true);
+    setTimeout(() => {
+      setStats({
+        totalBooks: 150,
+        borrowedBooks: 45,
+        overdueBooks: 8,
+        availableBooks: 97,
+      });
       setLoading(false);
-    }
-  }, [user]);
+    }, 500);
+  }, []);
 
   if (loading) {
     return (
       <div className="text-center mt-5">
-        <div className="spinner-border text-primary" role="status"></div>
-        <p className="mt-2">Loading real-time database records...</p>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="mt-2">Loading dashboard...</p>
       </div>
     );
   }
 
-  // Render Admin Dashboard for admins
-  if (user?.role === 'admin') {
-    return <AdminDashboard stats={stats} />;
-  }
-
-  // Fallback for other roles
   return (
-    <div className="container mt-5">
-      <div className="card shadow-sm border-0">
-        <div className="card-body text-center p-5">
-          <h2 className="mb-3">👋 Welcome, {user?.first_name || user?.username}!</h2>
-          <p className="text-muted">Please navigate to your specific dashboard.</p>
+    <div>
+      {/* Welcome Section */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card bg-primary text-white shadow-lg">
+            <div className="card-body p-4">
+              <h2 className="card-title">
+                👋 Welcome, {user?.first_name || user?.username || 'Guest'}!
+              </h2>
+              <p className="card-text">
+                {user?.role === 'student' && 'Explore new books and get personalized recommendations.'}
+                {user?.role === 'librarian' && 'Manage library resources and assist students.'}
+                {user?.role === 'admin' && 'Oversee the entire library management system.'}
+                {!user?.role && 'Welcome to the AI Library Management System.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="row g-3">
+        <div className="col-md-3 col-sm-6">
+          <div className="card bg-primary text-white shadow-sm">
+            <div className="card-body text-center py-3">
+              <div style={{ fontSize: '2.5rem' }}>📚</div>
+              <h3 className="mb-0">{stats.totalBooks}</h3>
+              <small>Total Books</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3 col-sm-6">
+          <div className="card bg-success text-white shadow-sm">
+            <div className="card-body text-center py-3">
+              <div style={{ fontSize: '2.5rem' }}>✅</div>
+              <h3 className="mb-0">{stats.availableBooks}</h3>
+              <small>Available</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3 col-sm-6">
+          <div className="card bg-warning text-dark shadow-sm">
+            <div className="card-body text-center py-3">
+              <div style={{ fontSize: '2.5rem' }}>📖</div>
+              <h3 className="mb-0">{stats.borrowedBooks}</h3>
+              <small>Borrowed</small>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3 col-sm-6">
+          <div className="card bg-danger text-white shadow-sm">
+            <div className="card-body text-center py-3">
+              <div style={{ fontSize: '2.5rem' }}>⚠️</div>
+              <h3 className="mb-0">{stats.overdueBooks}</h3>
+              <small>Overdue</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="row mt-4">
+        <div className="col-md-6">
+          <div className="card shadow-sm">
+            <div className="card-header bg-white">
+              <h5 className="mb-0">⚡ Quick Actions</h5>
+            </div>
+            <div className="card-body">
+              <div className="row g-2">
+                <div className="col-md-6">
+                  <Link to="/books" className="btn btn-primary w-100 py-3">
+                    <div style={{ fontSize: '1.5rem' }}>🔍</div>
+                    Search Books
+                  </Link>
+                </div>
+                <div className="col-md-6">
+                  <Link to="/borrowings" className="btn btn-info text-white w-100 py-3">
+                    <div style={{ fontSize: '1.5rem' }}>📖</div>
+                    My Borrowings
+                  </Link>
+                </div>
+                <div className="col-md-6">
+                  <Link to="/digital" className="btn btn-secondary w-100 py-3">
+                    <div style={{ fontSize: '1.5rem' }}>💻</div>
+                    Digital Resources
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-6">
+          <div className="card shadow-sm">
+            <div className="card-header bg-white">
+              <h5 className="mb-0">📊 Quick Stats</h5>
+            </div>
+            <div className="card-body">
+              <div className="row g-2">
+                <div className="col-6">
+                  <div className="bg-light p-3 rounded text-center">
+                    <h6>Total Borrowings</h6>
+                    <h3 className="text-primary">52</h3>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="bg-light p-3 rounded text-center">
+                    <h6>Active Users</h6>
+                    <h3 className="text-success">24</h3>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="bg-light p-3 rounded text-center">
+                    <h6>Categories</h6>
+                    <h3 className="text-warning">12</h3>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="bg-light p-3 rounded text-center">
+                    <h6>Digital Resources</h6>
+                    <h3 className="text-info">36</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -18,9 +18,9 @@ const getDashboardPathForRole = (role) => {
     case 'student':
        return '/student/dashboard';
     case 'guest':
-       return '/public';
+       return '/public/PublicDashboards';
     default:
-     
+
   }
 };
 
