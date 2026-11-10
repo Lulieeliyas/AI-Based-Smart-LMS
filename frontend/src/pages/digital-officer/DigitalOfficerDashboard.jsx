@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+<<<<<<< HEAD
 import { useNavigate } from "react-router-dom";
+=======
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 import digitalService, { toAbsoluteUrl } from "../../services/digitalService";
 import ResourceViewer from "../../components/digital/ResourceViewer";
 import {
@@ -81,8 +84,11 @@ const errorText = (error) => {
 };
 
 export default function DigitalOfficerDashboard() {
+<<<<<<< HEAD
   const navigate = useNavigate();
 
+=======
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
@@ -399,6 +405,7 @@ export default function DigitalOfficerDashboard() {
 
   return (
     <main className="dr-shell">
+<<<<<<< HEAD
       {/* Hero */}
       <header className="dr-hero">
         <div className="dr-hero-inner">
@@ -410,6 +417,75 @@ export default function DigitalOfficerDashboard() {
             >
               ←
             </button>
+=======
+      {/* Sidebar */}
+      <aside className="dr-sidebar">
+        <div className="dr-brand">
+          <span className="dr-brand-icon">D</span>
+          <span>
+            Digital<span className="dr-brand-light">Library</span>
+          </span>
+        </div>
+        <div className="dr-nav-label">WORKSPACE</div>
+        <a className="dr-nav active" href="#overview">
+          <span>◫</span> Overview
+        </a>
+        <a className="dr-nav" href="#resources">
+          <span>▤</span> Resources & Devices
+        </a>
+        <button
+          className="dr-nav dr-nav-button"
+          type="button"
+          onClick={() => {
+            setFormOpen(true);
+            setTimeout(
+              () =>
+                document
+                  .getElementById("editor")
+                  ?.scrollIntoView({ behavior: "smooth" }),
+              50
+            );
+          }}
+        >
+          <span>＋</span> Add resource / device
+        </button>
+        <div className="dr-side-bottom">
+          <div className="dr-avatar">DO</div>
+          <div>
+            <strong>Library Officer</strong>
+            <small>Content administrator</small>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <section className="dr-main" id="overview">
+        <header className="dr-topbar">
+          <div className="dr-crumb">
+            Workspace <span>/</span> Digital library & Electronic devices
+          </div>
+          <button
+            className="dr-button dr-button-primary"
+            onClick={() => {
+              setEditingId(null);
+              setForm(initialForm);
+              setFormOpen(true);
+              setTimeout(
+                () =>
+                  document
+                    .getElementById("editor")
+                    ?.scrollIntoView({ behavior: "smooth" }),
+                50
+              );
+            }}
+          >
+            ＋ Add resource / device
+          </button>
+        </header>
+
+        <div className="dr-content">
+          <div className="dr-heading">
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
             <div>
               <div className="dr-eyebrow">LIBRARY WORKSPACE</div>
               <h1>
@@ -421,6 +497,15 @@ export default function DigitalOfficerDashboard() {
                 inventory with a single unified workflow.
               </p>
             </div>
+<<<<<<< HEAD
+=======
+            <button
+              className="dr-button dr-button-plain"
+              onClick={addCategory}
+            >
+              ＋ New category
+            </button>
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
           </div>
 
           <div className="dr-hero-actions">
@@ -749,6 +834,13 @@ export default function DigitalOfficerDashboard() {
                   </label>
                 )}
               </div>
+<<<<<<< HEAD
+=======
+              <span className="dr-count">
+                {visibleResources.length} shown
+              </span>
+            </div>
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
               <div className="dr-form-actions">
                 <button
