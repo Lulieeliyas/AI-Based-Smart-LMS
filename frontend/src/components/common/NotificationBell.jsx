@@ -68,10 +68,6 @@ const NotificationBell = () => {
   const [error, setError] = useState('');
   const dropdownRef = useRef(null);
 
-  // ---------------------------------------------------------------
-  // Fetch notifications (defined with useCallback so the effect can
-  // depend on it cleanly)
-  // ---------------------------------------------------------------
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setUseDemo(true);
@@ -92,7 +88,6 @@ const NotificationBell = () => {
 
       let notifications = notificationResponse?.data;
 
-      // Ensure notifications is an array
       if (!Array.isArray(notifications)) {
         if (notifications && typeof notifications === 'object' && notifications.results) {
           notifications = notifications.results;
@@ -105,7 +100,6 @@ const NotificationBell = () => {
       setRecentNotifications(notifications.slice(0, 5));
       setUseDemo(false);
     } catch (err) {
-      // Fall back to demo on 401 / 404 / any other error
       if (err.response?.status === 401) {
         console.warn('User not authenticated, using demo notifications');
       } else if (err.response?.status === 404) {
@@ -122,9 +116,6 @@ const NotificationBell = () => {
     }
   }, [isAuthenticated, user]);
 
-  // ---------------------------------------------------------------
-  // Effect: set up click-outside + polling
-  // ---------------------------------------------------------------
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -148,9 +139,6 @@ const NotificationBell = () => {
     };
   }, [isAuthenticated, user, fetchNotifications]);
 
-  // ---------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------
   const markAsRead = async (id) => {
     const selected = recentNotifications.find(n => n.id === id);
 
@@ -188,31 +176,21 @@ const NotificationBell = () => {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'urgent':
-        return '#dc3545';
-      case 'high':
-        return '#ffc107';
-      case 'medium':
-        return '#0dcaf0';
-      default:
-        return '#6c757d';
+      case 'urgent': return '#dc3545';
+      case 'high': return '#ffc107';
+      case 'medium': return '#0dcaf0';
+      default: return '#6c757d';
     }
   };
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'borrow_due':
-        return '⏰';
-      case 'overdue':
-        return '⚠️';
-      case 'return_confirmation':
-        return '📤';
-      case 'new_resource':
-        return '📚';
-      case 'system':
-        return '📢';
-      default:
-        return '📨';
+      case 'borrow_due': return '⏰';
+      case 'overdue': return '⚠️';
+      case 'return_confirmation': return '📤';
+      case 'new_resource': return '📚';
+      case 'system': return '📢';
+      default: return '📨';
     }
   };
 
@@ -229,25 +207,20 @@ const NotificationBell = () => {
     }
   };
 
-  // ---------------------------------------------------------------
-  // Not logged in → show a login prompt
-  // ---------------------------------------------------------------
+  // 🔴 FIXED: Returning <div> instead of <li> to prevent hydration error
   if (!isAuthenticated || !user) {
     return (
-      <li className="nav-item" style={{ position: 'relative' }}>
-        <Link to="/login" className="nav-link text-white position-relative">
+      <div style={{ position: 'relative' }}>
+        <Link to="/login" className="nav-link text-white position-relative" style={{ display: 'inline-block' }}>
           <i className="bi bi-bell" style={{ fontSize: '1.2rem' }}></i>
         </Link>
-      </li>
+      </div>
     );
   }
 
-  // ---------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------
+  // 🔴 FIXED: Returning <div> instead of <li> to prevent hydration error
   return (
-    <li
-      className="nav-item"
+    <div
       ref={dropdownRef}
       style={{ position: 'relative' }}
     >
@@ -425,7 +398,7 @@ const NotificationBell = () => {
           </div>
         </div>
       )}
-    </li>
+    </div>
   );
 };
 

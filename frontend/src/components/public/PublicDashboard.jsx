@@ -60,11 +60,8 @@ const PublicDashboard = () => {
           </p>
           <div className="d-flex justify-content-center gap-3 flex-wrap">
             <Link to="/login" className="btn btn-light btn-lg">
-              <i className="bi bi-box-arrow-in-right me-2"></i>Let's Start
+             Let's Start
             </Link>
-            {/* <Link to="/register" className="btn btn-warning btn-lg">
-              <i className="bi bi-person-plus me-2"></i>Register
-            </Link> */}
           </div>
           <p className="mt-3 small opacity-75">
             🔓 You are browsing as a <strong>Guest</strong> — no account needed
