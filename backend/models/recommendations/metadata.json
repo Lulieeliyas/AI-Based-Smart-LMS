@@ -1,28 +1,35 @@
 {
   "version": "2.0.0",
-  "trained_at": "2026-10-28T22:15:29.100595+00:00",
-  "training_duration_seconds": 0.03,
-  "catalog_size": 51,
-  "ratings_count": 1,
-  "borrows_count": 0,
-  "interactions_count": 43,
+  "trained_at": "2026-11-09T02:36:06.204438+00:00",
+  "training_duration_seconds": 0.08,
+  "catalog_size": 15,
+  "ratings_count": 24,
+  "borrows_count": 24,
+  "interactions_count": 72,
   "content_model": {
     "vectorizer_max_features": 5000,
     "ngram_range": [
       1,
       2
     ],
-    "num_books_indexed": 51,
-    "vocabulary_size": 739
+    "num_books_indexed": 15,
+    "vocabulary_size": 580
   },
   "collaborative_model": {
-    "num_users": 3,
-    "num_books": 6,
-    "num_interactions": 9
+    "num_users": 5,
+    "num_books": 15,
+    "num_interactions": 24
   },
   "weights": {
     "content_weight": 0.4,
     "collab_weight": 0.4,
     "popularity_weight": 0.2
+  },
+  "evaluation": {
+    "evaluated_users": 5,
+    "precision_at_k": 0.0,
+    "recall_at_k": 0.0,
+    "ndcg_at_k": 0.0,
+    "catalog_coverage": 0.8
   }
 }

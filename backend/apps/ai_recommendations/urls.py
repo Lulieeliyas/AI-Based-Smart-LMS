@@ -9,6 +9,8 @@ from .views import (
     RecordActivityView,
     UserActivitiesView,
     ModelStatusView,
+    AskAiLibrarianView,
+    AiStatusView,
 )
 
 urlpatterns = [
@@ -21,4 +23,6 @@ urlpatterns = [
     path("activities/", UserActivitiesView.as_view(), name="rec-activities"),
     path("generate/", RecommendationsView.as_view(), name="rec-generate"),
     path("status/", ModelStatusView.as_view(), name="rec-status"),
+    path("ask-ai/", AskAiLibrarianView.as_view(), name="rec-ask-ai"),
+    path("ai-status/", AiStatusView.as_view(), name="rec-ai-status"),
 ]

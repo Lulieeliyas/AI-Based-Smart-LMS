@@ -330,3 +330,34 @@ class ModelStatusView(APIView):
             "status": "ready" if model_store.has_artifacts() else "uninitialized",
             "metadata": metadata,
         })
+
+
+class AskAiLibrarianView(APIView):
+    """
+    Ask AI Librarian: RAG-powered book recommendations using local Ollama (Llama 3.2).
+    Patrons submit a question/query and receive AI-grounded catalog recommendations.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        query = request.data.get("query", "")
+        limit = get_limit(request, default=3, maximum=10)
+
+        from .services.ollama_service import ask_ai_librarian
+        result = ask_ai_librarian(
+            query=query,
+            user=request.user if request.user.is_authenticated else None,
+            limit=limit,
+        )
+        return Response(result)
+
+
+class AiStatusView(APIView):
+    """
+    Returns the operational status of local Ollama AI integration.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from .services.ollama_service import get_ollama_status
+        return Response(get_ollama_status())

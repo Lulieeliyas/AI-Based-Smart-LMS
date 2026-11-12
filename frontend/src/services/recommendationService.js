@@ -52,6 +52,14 @@ const recommendationService = {
   getModelStatus: () => {
     return apiClient.get('/recommendations/status/', { _silent: true });
   },
+
+  askAiLibrarian: (query, limit = 3) => {
+    return apiClient.post('/recommendations/ask-ai/', { query, limit }, { _silent: true });
+  },
+
+  getAiStatus: () => {
+    return apiClient.get('/recommendations/ai-status/', { _silent: true });
+  },
 };
 
 export default recommendationService;

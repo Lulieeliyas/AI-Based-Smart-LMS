@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +14,11 @@ const Recommendations = ({ embedded = false }) => {
   const [activeTab, setActiveTab] = useState('personalized');
   const [availableOnly, setAvailableOnly] = useState(false);
   const [error, setError] = useState('');
+
+  // AI Librarian State
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
 
   useEffect(() => {
     fetchAllData();
@@ -103,6 +108,24 @@ const Recommendations = ({ embedded = false }) => {
     } catch (error) {
       console.warn('Error recording activity:', error);
     }
+  };
+
+  const handleAskAiLibrarian = async (e) => {
+    if (e) e.preventDefault();
+    if (!aiQuery.trim()) {
+      toast.info('Please enter what you are looking for!');
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const response = await recommendationService.askAiLibrarian(aiQuery.trim(), 4);
+      setAiResult(response.data);
+    } catch (err) {
+      console.error('AI Librarian error:', err);
+      toast.error('Failed to get AI recommendation. Please ensure Ollama is running.');
+    }
+    setAiLoading(false);
   };
 
   const renderBookCard = (rec, defaultBadge = null) => {
@@ -213,7 +236,7 @@ const Recommendations = ({ embedded = false }) => {
             {embedded ? '📚 Recommended For You' : '🤖 AI Book Recommendations'}
           </h2>
           <p className="text-muted small mb-0">
-            Personalized hybrid recommendations powered by content similarity, reader community trends, and borrowing history.
+            Personalized hybrid recommendations powered by TF-IDF similarity, collaborative filtering, and local Ollama AI.
           </p>
         </div>
 
@@ -287,6 +310,15 @@ const Recommendations = ({ embedded = false }) => {
         </li>
         <li className="nav-item">
           <button
+            className={`nav-link ${activeTab === 'ask-ai' ? 'active fw-bold text-primary' : ''}`}
+            onClick={() => setActiveTab('ask-ai')}
+          >
+            <i className="bi bi-robot me-1"></i>
+            Ask AI Librarian (Ollama)
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
             className={`nav-link ${activeTab === 'popular' ? 'active fw-bold' : ''}`}
             onClick={() => setActiveTab('popular')}
           >
@@ -305,7 +337,7 @@ const Recommendations = ({ embedded = false }) => {
         </li>
       </ul>
 
-      {/* Tab Content */}
+      {/* Tab: Personalized */}
       {activeTab === 'personalized' && (
         <div>
           {recommendations.length > 0 ? (
@@ -327,6 +359,112 @@ const Recommendations = ({ embedded = false }) => {
         </div>
       )}
 
+      {/* Tab: Ask AI Librarian (Ollama Llama 3.2) */}
+      {activeTab === 'ask-ai' && (
+        <div className="mb-4">
+          <div className="card shadow-sm border-0 mb-4 bg-light">
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <span className="badge bg-primary px-3 py-2 rounded-pill">
+                  <i className="bi bi-cpu me-1"></i> Local Ollama · Llama 3.2
+                </span>
+                <span className="text-success small fw-semibold">
+                  <i className="bi bi-check-circle-fill me-1"></i> Private & Offline AI
+                </span>
+              </div>
+              <h5 className="fw-bold mb-2">Ask the AI Librarian</h5>
+              <p className="text-muted small mb-3">
+                Describe what you want to learn, your favorite topics, or a specific reading mood.
+                Our local Ollama AI will search the library catalog and explain which books fit best.
+              </p>
+
+              <form onSubmit={handleAskAiLibrarian} className="d-flex gap-2">
+                <input
+                  type="text"
+                  className="form-control form-control-lg"
+                  placeholder="e.g. I want to learn clean coding and algorithms for Python interviews..."
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  disabled={aiLoading}
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary px-4 fw-semibold d-flex align-items-center gap-2"
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm"></span>
+                      <span>Thinking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-stars"></i>
+                      <span>Ask AI</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Sample Prompts */}
+              <div className="d-flex gap-2 mt-3 flex-wrap align-items-center">
+                <span className="small text-muted">Try:</span>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary py-0 px-2"
+                  onClick={() => setAiQuery('Clean software design and programming best practices')}
+                >
+                  💻 Clean code & design
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary py-0 px-2"
+                  onClick={() => setAiQuery('Inspiring books on cosmology, physics, and science')}
+                >
+                  🚀 Cosmology & Physics
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary py-0 px-2"
+                  onClick={() => setAiQuery('Classic dystopian fiction about freedom and surveillance')}
+                >
+                  📖 Dystopian fiction
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Response Box */}
+          {aiResult && (
+            <div className="mb-4">
+              <div className="alert alert-primary shadow-sm border-0 p-3 mb-4">
+                <div className="d-flex align-items-start gap-2">
+                  <div style={{ fontSize: '1.5rem' }}>🤖</div>
+                  <div>
+                    <h6 className="fw-bold mb-1">AI Librarian Advice:</h6>
+                    <p className="mb-0 text-dark" style={{ lineHeight: '1.5' }}>
+                      {aiResult.answer}
+                    </p>
+                    <div className="small text-muted mt-2">
+                      <i className="bi bi-lightning-charge-fill text-warning me-1"></i>
+                      {aiResult.powered_by}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h6 className="fw-bold mb-3">Matched Library Catalog Books:</h6>
+              <div className="row">
+                {aiResult.results?.map((rec) =>
+                  renderBookCard(rec, { text: 'AI Pick', color: 'primary', reason: rec.reason })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Popular */}
       {activeTab === 'popular' && (
         <div>
           {popularBooks.length > 0 ? (
@@ -343,6 +481,7 @@ const Recommendations = ({ embedded = false }) => {
         </div>
       )}
 
+      {/* Tab: Trending */}
       {activeTab === 'trending' && (
         <div>
           {trendingBooks.length > 0 ? (
