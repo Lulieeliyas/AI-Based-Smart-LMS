@@ -23,10 +23,16 @@ const getDashboardPathForRole = (role) => {
     case 'student':
       return '/student/dashboard';
     case 'guest':
+<<<<<<< HEAD
       return '/public';
     default:
       // ✅ Safe fallback — never returns undefined
       return '/student/dashboard';
+=======
+       return '/public/PublicDashboards';
+    default:
+
+>>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
   }
 };
 

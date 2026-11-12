@@ -254,3 +254,128 @@
     }
 
 }
+/* =========================================
+   COMPACT ADMIN NAVIGATION
+   Remove unnecessary spacing around icons
+========================================= */
+
+.sidebar-navigation {
+    padding: 8px 6px 12px;
+}
+
+.sidebar-section-title {
+    padding: 8px 8px 5px;
+}
+
+.sidebar-link,
+.sidebar-group-button {
+    min-height: 38px;
+    padding: 7px 8px;
+    margin-bottom: 2px;
+    gap: 9px;
+    border-radius: 4px;
+}
+
+.sidebar-link i,
+.sidebar-group-button i {
+    min-width: 18px;
+    width: 18px;
+    font-size: 16px;
+    text-align: center;
+}
+
+/* Keep menu icons clean without separate dark blocks */
+.sidebar-link,
+.sidebar-group-button {
+    background: transparent;
+}
+
+.sidebar-link:hover,
+.sidebar-group-button:hover,
+.sidebar-group-button.group-open {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-link.active {
+    background: #315b91;
+}
+
+/* Compact nested menu */
+.sidebar-submenu {
+    margin: 2px 0 5px 12px;
+    padding-left: 7px;
+}
+
+.sidebar-submenu .sidebar-link {
+    min-height: 34px;
+    padding: 6px 7px;
+}
+
+/* Remove unnecessary spacing around separators */
+.sidebar-divider {
+    margin: 8px 5px;
+}
+
+/* Compact header */
+.sidebar-header {
+    gap: 10px;
+    padding: 0 12px;
+}
+
+.sidebar-user {
+    margin-top: 8px;
+    padding: 9px 8px;
+}
+
+/* =========================================
+   COLLAPSED SIDEBAR: TRANSPARENT
+========================================= */
+
+.admin-sidebar.collapsed {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none;
+}
+
+.admin-sidebar.collapsed .sidebar-header {
+    background: transparent;
+    border-bottom: none;
+}
+
+/* Only the menu icon remains visible */
+.admin-sidebar.collapsed .sidebar-toggle {
+    color: #17243a;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.admin-sidebar.collapsed .sidebar-toggle:hover {
+    color: #17243a;
+    background: transparent;
+}
+
+/* =========================================
+   EXPANDED SIDEBAR: DARK NAVIGATION
+========================================= */
+
+.admin-sidebar.expanded {
+    background: #17243a !important;
+    color: #ffffff;
+    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+.admin-sidebar.expanded .sidebar-header {
+    background: #17243a;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-sidebar.expanded .sidebar-toggle {
+    color: #ffffff;
+    background: transparent;
+}
+
+.admin-sidebar.expanded .sidebar-toggle:hover {
+    background: #304766;
+    color: #ffffff;
+}
