@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import notificationService from '../../services/notificationService';
 
-<<<<<<< HEAD
-=======
 // Demo notifications for when backend is not available
 const DEMO_NOTIFICATIONS = [
   {
@@ -35,7 +33,6 @@ const DEMO_NOTIFICATIONS = [
     priority: 'medium',
     is_read: false,
     time_ago: '3 ሰአት በፊት / 3 hours ago',
-    // link: '/recommendations'
   },
   {
     id: 4,
@@ -59,7 +56,6 @@ const DEMO_NOTIFICATIONS = [
   }
 ];
 
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 const NotificationBell = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -67,55 +63,22 @@ const NotificationBell = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
-<<<<<<< HEAD
+  const [useDemo, setUseDemo] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-=======
-  const [useDemo, setUseDemo] = useState(false);
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
   const dropdownRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-<<<<<<< HEAD
+  // ---------------------------------------------------------------
+  // Fetch notifications (defined with useCallback so the effect can
+  // depend on it cleanly)
+  // ---------------------------------------------------------------
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated || !user) {
-      setUnreadCount(0);
-      setRecentNotifications([]);
-      return;
-=======
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-
-    // Only fetch notifications if user is authenticated
-    if (isAuthenticated && user) {
-      fetchNotifications();
-
-      const interval = setInterval(() => {
-        fetchNotifications();
-      }, 30000);
-
-      return () => {
-        clearInterval(interval);
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    } else {
-      // Show demo notifications if not authenticated
       setUseDemo(true);
       const demoUnread = DEMO_NOTIFICATIONS.filter(n => !n.is_read).length;
       setUnreadCount(demoUnread);
       setRecentNotifications(DEMO_NOTIFICATIONS.slice(0, 5));
-      setShowDropdown(false);
-
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
+      return;
     }
 
     setIsLoading(true);
@@ -127,15 +90,8 @@ const NotificationBell = () => {
         notificationService.getNotifications()
       ]);
 
-      const responseData = notificationResponse?.data;
+      let notifications = notificationResponse?.data;
 
-<<<<<<< HEAD
-      const notifications = Array.isArray(responseData)
-        ? responseData
-        : Array.isArray(responseData?.results)
-          ? responseData.results
-          : [];
-=======
       // Ensure notifications is an array
       if (!Array.isArray(notifications)) {
         if (notifications && typeof notifications === 'object' && notifications.results) {
@@ -144,115 +100,73 @@ const NotificationBell = () => {
           notifications = [];
         }
       }
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
       setUnreadCount(countResponse?.data?.unread_count ?? 0);
       setRecentNotifications(notifications.slice(0, 5));
-<<<<<<< HEAD
+      setUseDemo(false);
     } catch (err) {
-      console.error('Unable to load notifications:', err);
-
-      setError(
-        err.response?.status === 401
-          ? 'Your session has expired. Please sign in again.'
-          : 'Unable to load notifications. Please try again.'
-      );
+      // Fall back to demo on 401 / 404 / any other error
+      if (err.response?.status === 401) {
+        console.warn('User not authenticated, using demo notifications');
+      } else if (err.response?.status === 404) {
+        console.warn('Notifications endpoint not found, using demo notifications');
+      } else {
+        console.warn('Error fetching notifications:', err.message);
+      }
+      setUseDemo(true);
+      const demoUnread = DEMO_NOTIFICATIONS.filter(n => !n.is_read).length;
+      setUnreadCount(demoUnread);
+      setRecentNotifications(DEMO_NOTIFICATIONS.slice(0, 5));
     } finally {
       setIsLoading(false);
     }
   }, [isAuthenticated, user]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !user) {
-      setUnreadCount(0);
-      setRecentNotifications([]);
-      setError('');
-      return undefined;
-    }
-
-    fetchNotifications();
-
-    const interval = setInterval(fetchNotifications, 30000);
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user, fetchNotifications]);
-
+  // ---------------------------------------------------------------
+  // Effect: set up click-outside + polling
+  // ---------------------------------------------------------------
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
 
+    fetchNotifications();
+
+    let interval;
+    if (isAuthenticated && user) {
+      interval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+    }
+
     return () => {
+      if (interval) clearInterval(interval);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
-=======
-      setUseDemo(false);
-    } catch (error) {
-      // If 401 (Unauthorized), use demo notifications
-      if (error.response?.status === 401) {
-        console.warn('User not authenticated, using demo notifications');
-        setUseDemo(true);
-        const demoUnread = DEMO_NOTIFICATIONS.filter(n => !n.is_read).length;
-        setUnreadCount(demoUnread);
-        setRecentNotifications(DEMO_NOTIFICATIONS.slice(0, 5));
-      } else if (error.response?.status === 404) {
-        // If endpoint not found, use demo notifications
-        console.warn('Notifications endpoint not found, using demo notifications');
-        setUseDemo(true);
-        const demoUnread = DEMO_NOTIFICATIONS.filter(n => !n.is_read).length;
-        setUnreadCount(demoUnread);
-        setRecentNotifications(DEMO_NOTIFICATIONS.slice(0, 5));
-      } else {
-        // Other errors - also fallback to demo
-        console.warn('Error fetching notifications:', error.message);
-        setUseDemo(true);
-        const demoUnread = DEMO_NOTIFICATIONS.filter(n => !n.is_read).length;
-        setUnreadCount(demoUnread);
-        setRecentNotifications(DEMO_NOTIFICATIONS.slice(0, 5));
-      }
-    }
-    setIsLoading(false);
-  };
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
+  }, [isAuthenticated, user, fetchNotifications]);
 
+  // ---------------------------------------------------------------
+  // Actions
+  // ---------------------------------------------------------------
   const markAsRead = async (id) => {
-    const selected = recentNotifications.find(
-      (notification) => notification.id === id
-    );
+    const selected = recentNotifications.find(n => n.id === id);
 
     if (!selected || selected.is_read) {
       return;
     }
 
     try {
-<<<<<<< HEAD
-      await notificationService.markAsRead(id);
-
-      setRecentNotifications((previous) =>
-        previous.map((notification) =>
-          notification.id === id
-            ? { ...notification, is_read: true }
-            : notification
-        )
-=======
       if (!useDemo && isAuthenticated) {
         await notificationService.markAsRead(id);
       }
 
       setRecentNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
+        prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
       );
-
-      setUnreadCount((previous) => Math.max(0, previous - 1));
+      setUnreadCount(previous => Math.max(0, previous - 1));
     } catch (err) {
       console.error('Error marking notification as read:', err);
       setError('Could not mark notification as read.');
@@ -260,88 +174,17 @@ const NotificationBell = () => {
   };
 
   const markAllAsRead = async () => {
-<<<<<<< HEAD
-    if (unreadCount === 0) return;
-
-    try {
-      await notificationService.markAllAsRead();
-
-      setRecentNotifications((previous) =>
-        previous.map((notification) => ({
-          ...notification,
-          is_read: true,
-        }))
-      );
-
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Error marking all notifications as read:', err);
-      setError('Could not mark all notifications as read.');
-    }
-  };
-
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'borrow_due':
-      case 'reminder':
-        return '⏰';
-      case 'overdue':
-        return '⚠️';
-      case 'return_confirmation':
-      case 'return':
-        return '📤';
-      case 'new_resource':
-      case 'recommendation':
-        return '📚';
-      case 'system':
-        return '📢';
-      default:
-        return '📨';
-    }
-  };
-=======
     try {
       if (!useDemo && isAuthenticated) {
         await notificationService.markAllAsRead();
       }
 
-      setRecentNotifications(prev =>
-        prev.map(n => ({ ...n, is_read: true }))
-      );
+      setRecentNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
-    } catch (error) {
-      console.error('Error marking all as read:', error);
+    } catch (err) {
+      console.error('Error marking all as read:', err);
     }
   };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return '#dc3545';
-      case 'high': return '#ffc107';
-      case 'medium': return '#0dcaf0';
-      default: return '#6c757d';
-    }
-  };
-
-
-const getTypeIcon = (type) => {
-  switch (type) {
-    case 'borrow_due':
-      return '⏰';
-    case 'overdue':
-      return '⚠️';
-    case 'return_confirmation':
-      return '📤';
-    case 'new_resource':
-      return '📚';
-    case 'system':
-      return '📢';
-    default:
-      return '📨';
-  }
-};
-
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -356,17 +199,21 @@ const getTypeIcon = (type) => {
     }
   };
 
-  const formatDate = (value) => {
-    if (!value) return '';
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) return '';
-
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(date);
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'borrow_due':
+        return '⏰';
+      case 'overdue':
+        return '⚠️';
+      case 'return_confirmation':
+        return '📤';
+      case 'new_resource':
+        return '📚';
+      case 'system':
+        return '📢';
+      default:
+        return '📨';
+    }
   };
 
   const handleNotificationClick = async (notification) => {
@@ -377,35 +224,27 @@ const getTypeIcon = (type) => {
     setShowDropdown(false);
 
     const link = notification.link || notification.url;
-
     if (link && typeof link === 'string' && link.startsWith('/')) {
       navigate(link);
     }
   };
 
-<<<<<<< HEAD
-  if (!isAuthenticated || !user) {
-    return (
-      <li className="nav-item" style={{ position: 'relative' }}>
-        <Link
-          to="/login"
-          className="nav-link text-white position-relative"
-          aria-label="Login to see notifications"
-        >
-          <i className="bi bi-bell" style={{ fontSize: '1.2rem' }} />
-=======
-  // If user is not authenticated, show a login prompt
+  // ---------------------------------------------------------------
+  // Not logged in → show a login prompt
+  // ---------------------------------------------------------------
   if (!isAuthenticated || !user) {
     return (
       <li className="nav-item" style={{ position: 'relative' }}>
         <Link to="/login" className="nav-link text-white position-relative">
           <i className="bi bi-bell" style={{ fontSize: '1.2rem' }}></i>
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
         </Link>
       </li>
     );
   }
 
+  // ---------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------
   return (
     <li
       className="nav-item"
@@ -414,11 +253,7 @@ const getTypeIcon = (type) => {
     >
       <button
         className="nav-link btn btn-link text-white position-relative"
-<<<<<<< HEAD
-        onClick={() => setShowDropdown((previous) => !previous)}
-=======
         onClick={() => setShowDropdown(!showDropdown)}
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
         style={{ fontSize: '1.2rem', padding: '0.5rem' }}
       >
         <i className="bi bi-bell" />
@@ -431,7 +266,6 @@ const getTypeIcon = (type) => {
       </button>
 
       {showDropdown && (
-<<<<<<< HEAD
         <div
           className="dropdown-menu show"
           style={{
@@ -439,60 +273,24 @@ const getTypeIcon = (type) => {
             right: 0,
             left: 'auto',
             width: '380px',
-            maxWidth: '90vw',
             maxHeight: '450px',
             overflowY: 'auto',
             padding: 0,
             borderRadius: '12px',
             boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
             zIndex: 1050,
-            top: '100%',
+            top: '100%'
           }}
         >
-          <div className="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
-            <h6 className="mb-0 fw-bold">
-              <i className="bi bi-bell me-2" />
-              ማሳወቂያዎች / Notifications
-
-              {unreadCount > 0 && (
-                <span className="badge bg-danger ms-2">
-                  {unreadCount} አዲስ / new
-                </span>
-              )}
-            </h6>
-
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                className="btn btn-sm btn-link text-decoration-none"
-                onClick={markAllAsRead}
-              >
-                ሁሉንም አንብብ / Mark all read
-              </button>
-            )}
-          </div>
-
-=======
-        <div className="dropdown-menu show" style={{
-          position: 'absolute',
-          right: 0,
-          left: 'auto',
-          width: '380px',
-          maxHeight: '450px',
-          overflowY: 'auto',
-          padding: 0,
-          borderRadius: '12px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-          zIndex: 1050,
-          top: '100%'
-        }}>
           {/* Header */}
           <div className="dropdown-header d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
             <h6 className="mb-0 fw-bold">
               <i className="bi bi-bell me-2"></i>
               ማሳወቂያዎች / Notifications
               {unreadCount > 0 && (
-                <span className="badge bg-danger ms-2">{unreadCount} አዲስ / new</span>
+                <span className="badge bg-danger ms-2">
+                  {unreadCount} አዲስ / new
+                </span>
               )}
             </h6>
             <div>
@@ -507,7 +305,10 @@ const getTypeIcon = (type) => {
                   ሁሉንም አንብብ / Mark all read
                 </button>
               )}
-              <Link to="/notifications" className="btn btn-sm btn-link text-decoration-none">
+              <Link
+                to="/notifications"
+                className="btn btn-sm btn-link text-decoration-none"
+              >
                 ሁሉም / View All
               </Link>
             </div>
@@ -515,8 +316,7 @@ const getTypeIcon = (type) => {
 
           <div className="dropdown-divider m-0"></div>
 
-          {/* Loading State */}
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
+          {/* Body */}
           {isLoading ? (
             <div className="text-center py-4">
               <div
@@ -525,21 +325,9 @@ const getTypeIcon = (type) => {
               >
                 <span className="visually-hidden">Loading...</span>
               </div>
-<<<<<<< HEAD
               <p className="mt-2 text-muted small">
                 በማዘጋጀት ላይ / Loading...
               </p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-4 px-3">
-              <p className="text-danger small mb-2">{error}</p>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-primary"
-                onClick={fetchNotifications}
-              >
-                Retry
-              </button>
             </div>
           ) : recentNotifications.length === 0 ? (
             <div className="text-center py-5 px-4">
@@ -548,110 +336,25 @@ const getTypeIcon = (type) => {
                 ምንም ማሳወቂያ የለም / No notifications
               </p>
               <small className="text-muted">
-                You're all caught up!
+                እርስዎ ሁሉንም አንብበዋል / You're all caught up!
               </small>
             </div>
           ) : (
-            recentNotifications.map((notification) => {
-              const type =
-                notification.notification_type ||
-                notification.type ||
-                'system';
-
-              const priority = notification.priority || 'low';
-
-              return (
-                <div
-                  key={notification.id}
-                  className={`dropdown-item ${
-                    !notification.is_read ? 'bg-light' : ''
-                  }`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleNotificationClick(notification)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      handleNotificationClick(notification);
-                    }
-                  }}
-                  style={{
-                    borderLeft: `4px solid ${getPriorityColor(priority)}`,
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    whiteSpace: 'normal',
-                  }}
-                >
-                  <div className="d-flex align-items-start">
-                    <span className="me-2" style={{ fontSize: '1.2rem' }}>
-                      {getTypeIcon(type)}
-                    </span>
-
-                    <div className="flex-grow-1">
-                      <div className="d-flex justify-content-between align-items-start">
-                        <div className="fw-bold small">
-                          {notification.title}
-                        </div>
-
-                        <small
-                          className="text-muted ms-2"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          {notification.time_ago ||
-                            formatDate(notification.created_at) ||
-                            'Just now'}
-                        </small>
-                      </div>
-
-                      <div className="small text-muted">
-                        {notification.message}
-                      </div>
-
-                      <div className="mt-1 d-flex gap-1 flex-wrap">
-                        {!notification.is_read && (
-                          <span className="badge bg-primary">
-                            አዲስ / New
-                          </span>
-                        )}
-
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor: getPriorityColor(priority),
-                            color: '#fff',
-                          }}
-                        >
-                          {priority}
-=======
-              <p className="mt-2 text-muted small">በማዘጋጀት ላይ / Loading...</p>
-            </div>
-          ) : notificationList.length === 0 ? (
-            /* Empty State */
-            <div className="text-center py-5 px-4">
-              <span style={{ fontSize: '3rem' }}>🔔</span>
-              <p className="text-muted mt-2 mb-0">ምንም ማሳወቂያ የለም / No notifications</p>
-              <small className="text-muted">እርስዎ ሁሉንም አንብበዋል / You're all caught up!</small>
-            </div>
-          ) : (
-            /* Notification List */
-            notificationList.map((notification) => (
+            recentNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`dropdown-item ${!notification.is_read ? 'bg-light' : ''}`}
+                className={`dropdown-item ${
+                  !notification.is_read ? 'bg-light' : ''
+                }`}
                 style={{
-                  borderLeft: `4px solid ${getPriorityColor(notification.priority)}`,
+                  borderLeft: `4px solid ${getPriorityColor(
+                    notification.priority
+                  )}`,
                   padding: '12px 16px',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s'
                 }}
-                onClick={() => {
-                  if (!notification.is_read) {
-                    markAsRead(notification.id);
-                  }
-                  if (notification.link) {
-                    window.location.href = notification.link;
-                  }
-                }}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="d-flex align-items-start">
                   <span className="me-2" style={{ fontSize: '1.2rem' }}>
@@ -660,60 +363,63 @@ const getTypeIcon = (type) => {
                   <div className="flex-grow-1">
                     <div className="d-flex justify-content-between align-items-start">
                       <div className="fw-bold small">{notification.title}</div>
-                      <small className="text-muted ms-2" style={{ whiteSpace: 'nowrap' }}>
+                      <small
+                        className="text-muted ms-2"
+                        style={{ whiteSpace: 'nowrap' }}
+                      >
                         {notification.time_ago || 'አሁን / Just now'}
                       </small>
                     </div>
-                    <div className="small text-muted">{notification.message}</div>
+                    <div className="small text-muted">
+                      {notification.message}
+                    </div>
                     <div className="mt-1 d-flex gap-1 flex-wrap">
                       {!notification.is_read && (
                         <span className="badge bg-primary">አዲስ / New</span>
                       )}
-                      <span className={`badge bg-${getPriorityColor(notification.priority)}`}>
+                      <span
+                        className="badge"
+                        style={{
+                          backgroundColor: getPriorityColor(
+                            notification.priority
+                          )
+                        }}
+                      >
                         {notification.priority}
                       </span>
-                      {notification.link && (
+                      {(notification.link || notification.url) && (
                         <span className="badge bg-light text-dark border">
                           <i className="bi bi-arrow-right-circle"></i>
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
                         </span>
-
-                        {(notification.link || notification.url) && (
-                          <span className="badge bg-light text-dark border">
-                            <i className="bi bi-arrow-right-circle" />
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              );
-            })
+              </div>
+            ))
           )}
 
-<<<<<<< HEAD
-          <div className="dropdown-divider m-0" />
-=======
           {/* Demo Mode Indicator */}
           {useDemo && (
             <div className="text-center py-1 px-3 border-top">
-              <small className="text-muted">⚠️ ማሳያ ውሂብ / Demo mode</small>
+              <small className="text-muted">
+                ⚠️ ማሳያ ውሂብ / Demo mode
+              </small>
             </div>
           )}
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
+
+          {error && (
+            <div className="text-center py-1 px-3 border-top">
+              <small className="text-danger">{error}</small>
+            </div>
+          )}
 
           <div className="text-center py-2">
-<<<<<<< HEAD
             <Link
               to="/notifications"
               className="text-decoration-none small"
-              onClick={() => setShowDropdown(false)}
             >
-              <i className="bi bi-arrow-right me-1" />
-=======
-            <Link to="/notifications" className="text-decoration-none small">
               <i className="bi bi-arrow-right me-1"></i>
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
               ሁሉም ማሳወቂያዎች ይመልከቱ / See all notifications
             </Link>
           </div>

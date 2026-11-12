@@ -1,8 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-<<<<<<< HEAD
-import { useNavigate } from "react-router-dom";
-=======
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 import digitalService, { toAbsoluteUrl } from "../../services/digitalService";
 import ResourceViewer from "../../components/digital/ResourceViewer";
 import {
@@ -84,11 +80,6 @@ const errorText = (error) => {
 };
 
 export default function DigitalOfficerDashboard() {
-<<<<<<< HEAD
-  const navigate = useNavigate();
-
-=======
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
   const [resources, setResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState({});
@@ -108,8 +99,9 @@ export default function DigitalOfficerDashboard() {
   const [notice, setNotice] = useState("");
   const [viewingResource, setViewingResource] = useState(null);
   const [openSetAsId, setOpenSetAsId] = useState(null);
-  const [view, setView] = useState("table"); // "table" | "grid"
+  const [view, setView] = useState("grid"); // "table" | "grid"
 
+  // Close dropdown on global click
   useEffect(() => {
     const handleGlobalClick = () => setOpenSetAsId(null);
     window.addEventListener("click", handleGlobalClick);
@@ -143,6 +135,7 @@ export default function DigitalOfficerDashboard() {
     return () => clearTimeout(timer);
   }, [load]);
 
+  // Previews for uploaded files
   useEffect(() => {
     if (!form.file) {
       setLocalFileUrl("");
@@ -214,7 +207,7 @@ export default function DigitalOfficerDashboard() {
         await digitalService.createResource(payload);
         setNotice(
           isDevice
-            ? "Electronic device successfully added to the digital collection."
+            ? "Electronic device successfully added to the collection."
             : "Resource uploaded and added to the collection."
         );
       }
@@ -405,87 +398,38 @@ export default function DigitalOfficerDashboard() {
 
   return (
     <main className="dr-shell">
-<<<<<<< HEAD
-      {/* Hero */}
-      <header className="dr-hero">
-        <div className="dr-hero-inner">
-          <div className="dr-hero-left">
-            <button
-              className="dr-back"
-              onClick={() => navigate(-1)}
-              title="Go back"
-            >
-              ←
-            </button>
-=======
-      {/* Sidebar */}
-      <aside className="dr-sidebar">
-        <div className="dr-brand">
-          <span className="dr-brand-icon">D</span>
-          <span>
-            Digital<span className="dr-brand-light">Library</span>
-          </span>
-        </div>
-        <div className="dr-nav-label">WORKSPACE</div>
-        <a className="dr-nav active" href="#overview">
-          <span>◫</span> Overview
-        </a>
-        <a className="dr-nav" href="#resources">
-          <span>▤</span> Resources & Devices
-        </a>
-        <button
-          className="dr-nav dr-nav-button"
-          type="button"
-          onClick={() => {
-            setFormOpen(true);
-            setTimeout(
-              () =>
-                document
-                  .getElementById("editor")
-                  ?.scrollIntoView({ behavior: "smooth" }),
-              50
-            );
-          }}
-        >
-          <span>＋</span> Add resource / device
-        </button>
-        <div className="dr-side-bottom">
-          <div className="dr-avatar">DO</div>
-          <div>
-            <strong>Library Officer</strong>
-            <small>Content administrator</small>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
       <section className="dr-main" id="overview">
+        {/* Top Action Bar */}
         <header className="dr-topbar">
           <div className="dr-crumb">
             Workspace <span>/</span> Digital library & Electronic devices
           </div>
-          <button
-            className="dr-button dr-button-primary"
-            onClick={() => {
-              setEditingId(null);
-              setForm(initialForm);
-              setFormOpen(true);
-              setTimeout(
-                () =>
-                  document
-                    .getElementById("editor")
-                    ?.scrollIntoView({ behavior: "smooth" }),
-                50
-              );
-            }}
-          >
-            ＋ Add resource / device
-          </button>
+          <div className="dr-topbar-actions">
+            <button className="dr-btn dr-btn-ghost" onClick={addCategory}>
+              ＋ New category
+            </button>
+            <button
+              className="dr-btn dr-btn-primary"
+              onClick={() => {
+                setEditingId(null);
+                setForm(initialForm);
+                setFormOpen(true);
+                setTimeout(
+                  () =>
+                    document
+                      .getElementById("editor")
+                      ?.scrollIntoView({ behavior: "smooth" }),
+                  50
+                );
+              }}
+            >
+              ＋ Add resource / device
+            </button>
+          </div>
         </header>
 
         <div className="dr-content">
           <div className="dr-heading">
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
             <div>
               <div className="dr-eyebrow">LIBRARY WORKSPACE</div>
               <h1>
@@ -497,557 +441,532 @@ export default function DigitalOfficerDashboard() {
                 inventory with a single unified workflow.
               </p>
             </div>
-<<<<<<< HEAD
-=======
-            <button
-              className="dr-button dr-button-plain"
-              onClick={addCategory}
-            >
-              ＋ New category
-            </button>
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
           </div>
 
-          <div className="dr-hero-actions">
-            <button className="dr-btn dr-btn-ghost" onClick={addCategory}>
-              ＋ New category
-            </button>
-            <button className="dr-btn dr-btn-primary" onClick={openCreate}>
-              ＋ Add resource
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="dr-content">
-        {/* Alerts */}
-        {error && (
-          <div className="dr-alert error" role="alert">
-            <span>!</span>
-            <div>
-              <strong>Something needs your attention</strong>
-              <p>{error}</p>
-            </div>
-            <button onClick={() => setError("")} aria-label="Dismiss">
-              ×
-            </button>
-          </div>
-        )}
-        {notice && (
-          <div className="dr-alert success" role="status">
-            <span>✓</span>
-            <p>{notice}</p>
-            <button onClick={() => setNotice("")} aria-label="Dismiss">
-              ×
-            </button>
-          </div>
-        )}
-
-        {/* KPI tiles */}
-        <section className="dr-kpis" aria-label="Library statistics">
-          {kpis.map((k) => (
-            <article className={`dr-kpi tone-${k.tone}`} key={k.label}>
-              <div className="dr-kpi-head">
-                <span className="dr-kpi-icon">{k.icon}</span>
-                <span className="dr-kpi-caption">{k.caption}</span>
-              </div>
-              <strong>{Number(k.value || 0).toLocaleString()}</strong>
-              <span className="dr-kpi-label">{k.label}</span>
-            </article>
-          ))}
-        </section>
-
-        {/* Editor */}
-        {formOpen && (
-          <section className="dr-panel" id="editor">
-            <div className="dr-panel-head">
+          {/* Alerts */}
+          {error && (
+            <div className="dr-alert error" role="alert">
+              <span>!</span>
               <div>
-                <h2>
-                  {editingId
-                    ? "Edit Resource or Device"
-                    : "Add Resource or Electronic Device"}
-                </h2>
-                <p>
-                  {editingId
-                    ? "Update the details and specifications below."
-                    : "Fill in the details to add a new item to the collection."}
-                </p>
+                <strong>Something needs your attention</strong>
+                <p>{error}</p>
               </div>
-              <button
-                className="dr-panel-close"
-                onClick={reset}
-                aria-label="Close editor"
-              >
+              <button onClick={() => setError("")} aria-label="Dismiss">
                 ×
               </button>
             </div>
+          )}
+          {notice && (
+            <div className="dr-alert success" role="status">
+              <span>✓</span>
+              <p>{notice}</p>
+              <button onClick={() => setNotice("")} aria-label="Dismiss">
+                ×
+              </button>
+            </div>
+          )}
 
-            <form onSubmit={submit}>
-              <div className="dr-form-grid">
-                <label className="wide">
-                  {form.resource_type === "electronic_device"
-                    ? "Device Name *"
-                    : "Title *"}
-                  <input
-                    name="title"
-                    value={form.title}
-                    onChange={updateForm}
-                    required
-                    placeholder={
-                      form.resource_type === "electronic_device"
-                        ? "e.g. Raspberry Pi 4 Kit, Kindle Paperwhite, Arduino Starter"
-                        : "e.g. Introduction to Machine Learning"
-                    }
-                  />
-                </label>
+          {/* KPI tiles */}
+          <section className="dr-kpis" aria-label="Library statistics">
+            {kpis.map((k) => (
+              <article className={`dr-kpi tone-${k.tone}`} key={k.label}>
+                <div className="dr-kpi-head">
+                  <span className="dr-kpi-icon">{k.icon}</span>
+                  <span className="dr-kpi-caption">{k.caption}</span>
+                </div>
+                <strong>{Number(k.value || 0).toLocaleString()}</strong>
+                <span className="dr-kpi-label">{k.label}</span>
+              </article>
+            ))}
+          </section>
 
-                <label>
-                  Resource Type <b>*</b>
-                  <select
-                    name="resource_type"
-                    value={form.resource_type}
-                    onChange={updateForm}
-                  >
-                    {types.map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+          {/* Editor Form */}
+          {formOpen && (
+            <section className="dr-panel" id="editor">
+              <div className="dr-panel-head">
+                <div>
+                  <h2>
+                    {editingId
+                      ? "Edit Resource or Device"
+                      : "Add Resource or Electronic Device"}
+                  </h2>
+                  <p>
+                    {editingId
+                      ? "Update the details and specifications below."
+                      : "Fill in the details to add a new item to the collection."}
+                  </p>
+                </div>
+                <button
+                  className="dr-panel-close"
+                  onClick={reset}
+                  aria-label="Close editor"
+                >
+                  ×
+                </button>
+              </div>
 
-                <label>
-                  Source <b>*</b>
-                  <select
-                    name="source_type"
-                    value={form.source_type}
-                    onChange={updateForm}
-                  >
-                    <option value="file">Uploaded file / local media</option>
-                    <option value="youtube">YouTube video link</option>
-                    <option value="external">External link / URL</option>
-                  </select>
-                </label>
-
-                <label>
-                  Category
-                  <select
-                    name="category"
-                    value={form.category}
-                    onChange={updateForm}
-                  >
-                    <option value="">Uncategorized</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Access Level
-                  <select
-                    name="access_level"
-                    value={form.access_level}
-                    onChange={updateForm}
-                  >
-                    {access.map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  {form.resource_type === "electronic_device"
-                    ? "Hardware Model / Specs"
-                    : "Duration / Specs"}
-                  <input
-                    name="duration"
-                    value={form.duration}
-                    onChange={updateForm}
-                    placeholder={
-                      form.resource_type === "electronic_device"
-                        ? "e.g. 8GB RAM / Quad Core / Rev 1.2"
-                        : "e.g. 15:30"
-                    }
-                  />
-                </label>
-
-                <label className="wide">
-                  {form.resource_type === "electronic_device"
-                    ? "Device Description & Technical Specifications"
-                    : "Description"}
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={updateForm}
-                    rows="3"
-                    placeholder={
-                      form.resource_type === "electronic_device"
-                        ? "Enter detailed description, device specifications, components included in the package, and usage guidelines…"
-                        : "A short summary to help users discover and use this resource…"
-                    }
-                  />
-                </label>
-
-                <label className="wide">
-                  Keywords <span className="dr-muted">(comma-separated)</span>
-                  <input
-                    name="keywords"
-                    value={form.keywords}
-                    onChange={updateForm}
-                    placeholder={
-                      form.resource_type === "electronic_device"
-                        ? "electronics, hardware, embedded, raspberry pi, iot"
-                        : "computer science, algorithms, textbook"
-                    }
-                  />
-                </label>
-
-                <label className="wide">
-                  <strong>
+              <form onSubmit={submit}>
+                <div className="dr-form-grid">
+                  <label className="wide">
                     {form.resource_type === "electronic_device"
-                      ? "🔌 Electronic Device Photo / Hardware Image"
-                      : "Thumbnail / Cover Image"}
-                  </strong>
-                  <span className="dr-muted">
-                    {form.resource_type === "electronic_device"
-                      ? " (Recommended: Photo of the physical device or kit)"
-                      : " (optional; shown in resource cards)"}
-                  </span>
-                  <input
-                    className="dr-file"
-                    type="file"
-                    name="thumbnail"
-                    accept="image/*"
-                    onChange={updateForm}
-                  />
-                  {form.thumbnail && (
-                    <div className="dr-thumb-preview">
-                      <img
-                        src={localThumbnailUrl}
-                        alt="Selected thumbnail preview"
-                      />
-                      <span>{form.thumbnail.name}</span>
-                    </div>
-                  )}
-                </label>
+                      ? "Device Name *"
+                      : "Title *"}
+                    <input
+                      name="title"
+                      value={form.title}
+                      onChange={updateForm}
+                      required
+                      placeholder={
+                        form.resource_type === "electronic_device"
+                          ? "e.g. Raspberry Pi 4 Kit, Kindle Paperwhite, Arduino Starter"
+                          : "e.g. Introduction to Machine Learning"
+                      }
+                    />
+                  </label>
 
-                {form.source_type === "file" ? (
+                  <label>
+                    Resource Type <b>*</b>
+                    <select
+                      name="resource_type"
+                      value={form.resource_type}
+                      onChange={updateForm}
+                    >
+                      {types.map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Source <b>*</b>
+                    <select
+                      name="source_type"
+                      value={form.source_type}
+                      onChange={updateForm}
+                    >
+                      <option value="file">Uploaded file / local media</option>
+                      <option value="youtube">YouTube video link</option>
+                      <option value="external">External link / URL</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Category
+                    <select
+                      name="category"
+                      value={form.category}
+                      onChange={updateForm}
+                    >
+                      <option value="">Uncategorized</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Access Level
+                    <select
+                      name="access_level"
+                      value={form.access_level}
+                      onChange={updateForm}
+                    >
+                      {access.map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    {form.resource_type === "electronic_device"
+                      ? "Hardware Model / Specs"
+                      : "Duration / Specs"}
+                    <input
+                      name="duration"
+                      value={form.duration}
+                      onChange={updateForm}
+                      placeholder={
+                        form.resource_type === "electronic_device"
+                          ? "e.g. 8GB RAM / Quad Core / Rev 1.2"
+                          : "e.g. 15:30"
+                      }
+                    />
+                  </label>
+
+                  <label className="wide">
+                    {form.resource_type === "electronic_device"
+                      ? "Device Description & Technical Specifications"
+                      : "Description"}
+                    <textarea
+                      name="description"
+                      value={form.description}
+                      onChange={updateForm}
+                      rows="3"
+                      placeholder={
+                        form.resource_type === "electronic_device"
+                          ? "Enter detailed description, device specifications, components included in the package, and usage guidelines…"
+                          : "A short summary to help users discover and use this resource…"
+                      }
+                    />
+                  </label>
+
+                  <label className="wide">
+                    Keywords{" "}
+                    <span className="dr-muted">(comma-separated)</span>
+                    <input
+                      name="keywords"
+                      value={form.keywords}
+                      onChange={updateForm}
+                      placeholder={
+                        form.resource_type === "electronic_device"
+                          ? "electronics, hardware, embedded, raspberry pi, iot"
+                          : "computer science, algorithms, textbook"
+                      }
+                    />
+                  </label>
+
                   <label className="wide">
                     <strong>
                       {form.resource_type === "electronic_device"
-                        ? "📖 Device Contents / Manual / Schematics / Software"
-                        : "Upload Resource File"}
+                        ? "🔌 Electronic Device Photo / Hardware Image"
+                        : "Thumbnail / Cover Image"}
                     </strong>
                     <span className="dr-muted">
                       {form.resource_type === "electronic_device"
-                        ? " (Optional if hardware photo is provided)"
-                        : editingId
-                        ? " (optional when editing)"
-                        : " (required)"}
+                        ? " (Recommended: Photo of the physical device or kit)"
+                        : " (optional; shown in resource cards)"}
                     </span>
-                    <div
-                      className={`dr-drop-zone ${
-                        isDraggingFile ? "dragging" : ""
-                      }`}
-                      onDragEnter={(e) => {
-                        e.preventDefault();
-                        setIsDraggingFile(true);
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDraggingFile(true);
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        setIsDraggingFile(false);
-                      }}
-                      onDrop={handleDropFile}
-                    >
-                      <span className="dr-drop-icon">⇧</span>
-                      <strong>Drag and drop your file here</strong>
-                      <span className="dr-drop-or">
-                        or choose from your computer
-                      </span>
-                      <input
-                        className="dr-file"
-                        type="file"
-                        name="file"
-                        onChange={updateForm}
-                        accept=".pdf,.epub,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.png,.jpg,.jpeg,.txt,.zip,.tar,.gz"
-                      />
-                      <small>
-                        PDF manuals, schematics, images, videos, audio, text,
-                        or office docs
-                      </small>
-                    </div>
-
-                    {form.file && (
-                      <div className="dr-local-preview">
-                        <div className="dr-local-meta">
-                          <strong>{form.file.name}</strong>
-                          <span>
-                            {(form.file.size / (1024 * 1024)).toFixed(2)} MB
-                            · {form.file.type || "File type detected"}
-                          </span>
-                        </div>
-                        {form.file.type.startsWith("image/") && (
-                          <img
-                            src={localFileUrl}
-                            alt={`Preview of ${form.file.name}`}
-                          />
-                        )}
-                        {form.file.type === "application/pdf" && (
-                          <iframe
-                            title={`Preview of ${form.file.name}`}
-                            src={localFileUrl}
-                          />
-                        )}
-                        {form.file.type.startsWith("audio/") && (
-                          <audio controls src={localFileUrl}>
-                            Your browser does not support audio preview.
-                          </audio>
-                        )}
-                        {form.file.type.startsWith("video/") && (
-                          <video controls src={localFileUrl}>
-                            Your browser does not support video preview.
-                          </video>
-                        )}
+                    <input
+                      className="dr-file"
+                      type="file"
+                      name="thumbnail"
+                      accept="image/*"
+                      onChange={updateForm}
+                    />
+                    {form.thumbnail && (
+                      <div className="dr-thumb-preview">
+                        <img
+                          src={localThumbnailUrl}
+                          alt="Selected thumbnail preview"
+                        />
+                        <span>{form.thumbnail.name}</span>
                       </div>
                     )}
                   </label>
-                ) : (
-                  <label className="wide">
-                    Resource URL <b>*</b>
-                    <input
-                      type="url"
-                      name="external_url"
-                      value={form.external_url}
-                      onChange={updateForm}
-                      required
-                      placeholder="https://…"
-                    />
-                  </label>
-                )}
+
+                  {form.source_type === "file" ? (
+                    <label className="wide">
+                      <strong>
+                        {form.resource_type === "electronic_device"
+                          ? "📖 Device Contents / Manual / Schematics / Software"
+                          : "Upload Resource File"}
+                      </strong>
+                      <span className="dr-muted">
+                        {form.resource_type === "electronic_device"
+                          ? " (Optional if hardware photo is provided)"
+                          : editingId
+                          ? " (optional when editing)"
+                          : " (required)"}
+                      </span>
+                      <div
+                        className={`dr-drop-zone ${
+                          isDraggingFile ? "dragging" : ""
+                        }`}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          setIsDraggingFile(true);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingFile(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDraggingFile(false);
+                        }}
+                        onDrop={handleDropFile}
+                      >
+                        <span className="dr-drop-icon">⇧</span>
+                        <strong>Drag and drop your file here</strong>
+                        <span className="dr-drop-or">
+                          or choose from your computer
+                        </span>
+                        <input
+                          className="dr-file"
+                          type="file"
+                          name="file"
+                          onChange={updateForm}
+                          accept=".pdf,.epub,.doc,.docx,.ppt,.pptx,.mp4,.mp3,.png,.jpg,.jpeg,.txt,.zip,.tar,.gz"
+                        />
+                        <small>
+                          PDF manuals, schematics, images, videos, audio, text,
+                          or office docs
+                        </small>
+                      </div>
+
+                      {form.file && (
+                        <div className="dr-local-preview">
+                          <div className="dr-local-meta">
+                            <strong>{form.file.name}</strong>
+                            <span>
+                              {(form.file.size / (1024 * 1024)).toFixed(2)} MB
+                              · {form.file.type || "File type detected"}
+                            </span>
+                          </div>
+                          {form.file.type.startsWith("image/") && (
+                            <img
+                              src={localFileUrl}
+                              alt={`Preview of ${form.file.name}`}
+                            />
+                          )}
+                          {form.file.type === "application/pdf" && (
+                            <iframe
+                              title={`Preview of ${form.file.name}`}
+                              src={localFileUrl}
+                            />
+                          )}
+                          {form.file.type.startsWith("audio/") && (
+                            <audio controls src={localFileUrl}>
+                              Your browser does not support audio preview.
+                            </audio>
+                          )}
+                          {form.file.type.startsWith("video/") && (
+                            <video controls src={localFileUrl}>
+                              Your browser does not support video preview.
+                            </video>
+                          )}
+                        </div>
+                      )}
+                    </label>
+                  ) : (
+                    <label className="wide">
+                      Resource URL <b>*</b>
+                      <input
+                        type="url"
+                        name="external_url"
+                        value={form.external_url}
+                        onChange={updateForm}
+                        required
+                        placeholder="https://…"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <div className="dr-form-actions">
+                  <button
+                    disabled={saving}
+                    className="dr-btn dr-btn-primary"
+                    type="submit"
+                  >
+                    {saving
+                      ? "Saving…"
+                      : editingId
+                      ? "Save changes"
+                      : "Add to Library"}
+                  </button>
+                  <button
+                    className="dr-btn dr-btn-ghost"
+                    type="button"
+                    onClick={reset}
+                  >
+                    {editingId ? "Cancel editing" : "Close"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          )}
+
+          {/* Collection */}
+          <section id="resources" className="dr-collection">
+            <div className="dr-collection-head">
+              <div>
+                <h2>Collection</h2>
+                <p>Review status, preview items, and publish to the library.</p>
               </div>
-<<<<<<< HEAD
-=======
+              <div className="dr-view-toggle" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={view === "table"}
+                  className={view === "table" ? "active" : ""}
+                  onClick={() => setView("table")}
+                  title="Table view"
+                >
+                  ☰
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={view === "grid"}
+                  className={view === "grid" ? "active" : ""}
+                  onClick={() => setView("grid")}
+                  title="Grid view"
+                >
+                  ▦
+                </button>
+              </div>
+            </div>
+
+            {/* Category pills */}
+            <div className="dr-filter-row">
+              <span className="dr-filter-label">Categories</span>
+              <div className="dr-pills">
+                <button
+                  className={categoryFilter === "all" ? "selected" : ""}
+                  onClick={() => setCategoryFilter("all")}
+                >
+                  All <span>{resources.length}</span>
+                </button>
+                {categories.map((cat) => {
+                  const count = resources.filter(
+                    (r) =>
+                      String(
+                        r.category?.id ?? r.category_id ?? r.category ?? ""
+                      ) === String(cat.id)
+                  ).length;
+                  return (
+                    <button
+                      key={cat.id}
+                      className={
+                        String(categoryFilter) === String(cat.id)
+                          ? "selected"
+                          : ""
+                      }
+                      onClick={() => setCategoryFilter(String(cat.id))}
+                    >
+                      {cat.name}
+                      <span>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Type pills */}
+            <div className="dr-filter-row">
+              <span className="dr-filter-label">Resource type</span>
+              <div className="dr-pills">
+                <button
+                  className={typeFilter === "all" ? "selected" : ""}
+                  onClick={() => setTypeFilter("all")}
+                >
+                  All <span>{resources.length}</span>
+                </button>
+                {types.map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={typeFilter === value ? "selected" : ""}
+                    onClick={() => setTypeFilter(value)}
+                  >
+                    {label.split(" ").slice(1).join(" ") || label}
+                    <span>{typeCounts[value] || 0}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="dr-toolbar">
+              <div className="dr-search">
+                <span>⌕</span>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search title, model, keywords, category…"
+                  aria-label="Search resources"
+                />
+              </div>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                aria-label="Filter by status"
+              >
+                <option value="">All statuses</option>
+                {Object.entries(statusText).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
               <span className="dr-count">
-                {visibleResources.length} shown
+                {visibleResources.length} item
+                {visibleResources.length === 1 ? "" : "s"}
               </span>
             </div>
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
-              <div className="dr-form-actions">
-                <button
-                  disabled={saving}
-                  className="dr-btn dr-btn-primary"
-                  type="submit"
-                >
-                  {saving
-                    ? "Saving…"
-                    : editingId
-                    ? "Save changes"
-                    : "Add to Library"}
-                </button>
-                <button
-                  className="dr-btn dr-btn-ghost"
-                  type="button"
-                  onClick={reset}
-                >
-                  {editingId ? "Cancel editing" : "Close"}
+            {loading ? (
+              <div className="dr-loading">
+                <div className="dr-loading-spinner" />
+                <p>Loading collection…</p>
+              </div>
+            ) : visibleResources.length === 0 ? (
+              <div className="dr-empty-state">
+                <div className="dr-empty-emoji">🗂️</div>
+                <h3>No resources yet</h3>
+                <p>
+                  Add your first digital resource or electronic device to start
+                  building the collection.
+                </p>
+                <button className="dr-btn dr-btn-primary" onClick={openCreate}>
+                  ＋ Add resource
                 </button>
               </div>
-            </form>
-          </section>
-        )}
-
-        {/* Collection */}
-        <section id="resources" className="dr-collection">
-          <div className="dr-collection-head">
-            <div>
-              <h2>Collection</h2>
-              <p>Review status, preview items, and publish to the library.</p>
-            </div>
-            <div className="dr-view-toggle" role="tablist">
-              <button
-                role="tab"
-                aria-selected={view === "table"}
-                className={view === "table" ? "active" : ""}
-                onClick={() => setView("table")}
-                title="Table view"
-              >
-                ☰
-              </button>
-              <button
-                role="tab"
-                aria-selected={view === "grid"}
-                className={view === "grid" ? "active" : ""}
-                onClick={() => setView("grid")}
-                title="Grid view"
-              >
-                ▦
-              </button>
-            </div>
-          </div>
-
-          {/* Category pills */}
-          <div className="dr-filter-row">
-            <span className="dr-filter-label">Categories</span>
-            <div className="dr-pills">
-              <button
-                className={categoryFilter === "all" ? "selected" : ""}
-                onClick={() => setCategoryFilter("all")}
-              >
-                All <span>{resources.length}</span>
-              </button>
-              {categories.map((cat) => {
-                const count = resources.filter(
-                  (r) =>
-                    String(r.category?.id ?? r.category_id ?? r.category ?? "") ===
-                    String(cat.id)
-                ).length;
-                return (
-                  <button
-                    key={cat.id}
-                    className={
-                      String(categoryFilter) === String(cat.id)
-                        ? "selected"
-                        : ""
-                    }
-                    onClick={() => setCategoryFilter(String(cat.id))}
-                  >
-                    {cat.name}
-                    <span>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Type pills */}
-          <div className="dr-filter-row">
-            <span className="dr-filter-label">Resource type</span>
-            <div className="dr-pills">
-              <button
-                className={typeFilter === "all" ? "selected" : ""}
-                onClick={() => setTypeFilter("all")}
-              >
-                All <span>{resources.length}</span>
-              </button>
-              {types.map(([value, label]) => (
-                <button
-                  key={value}
-                  className={typeFilter === value ? "selected" : ""}
-                  onClick={() => setTypeFilter(value)}
-                >
-                  {label.split(" ").slice(1).join(" ") || label}
-                  <span>{typeCounts[value] || 0}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Toolbar */}
-          <div className="dr-toolbar">
-            <div className="dr-search">
-              <span>⌕</span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search title, model, keywords, category…"
-                aria-label="Search resources"
+            ) : view === "table" ? (
+              <ResourceTable
+                resources={visibleResources}
+                openSetAsId={openSetAsId}
+                setOpenSetAsId={setOpenSetAsId}
+                onView={openResource}
+                onEdit={edit}
+                onDelete={remove}
+                onVerify={verify}
+                onPublish={publish}
               />
-            </div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              aria-label="Filter by status"
-            >
-              <option value="">All statuses</option>
-              {Object.entries(statusText).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-            <span className="dr-count">
-              {visibleResources.length} item
-              {visibleResources.length === 1 ? "" : "s"}
-            </span>
-          </div>
+            ) : (
+              <ResourceGrid
+                resources={visibleResources}
+                openSetAsId={openSetAsId}
+                setOpenSetAsId={setOpenSetAsId}
+                onView={openResource}
+                onEdit={edit}
+                onDelete={remove}
+                onVerify={verify}
+                onPublish={publish}
+              />
+            )}
+          </section>
 
-          {loading ? (
-            <div className="dr-loading">
-              <div className="dr-loading-spinner" />
-              <p>Loading collection…</p>
-            </div>
-          ) : visibleResources.length === 0 ? (
-            <div className="dr-empty-state">
-              <div className="dr-empty-emoji">🗂️</div>
-              <h3>No resources yet</h3>
-              <p>
-                Add your first digital resource or electronic device to start
-                building the collection.
-              </p>
-              <button className="dr-btn dr-btn-primary" onClick={openCreate}>
-                ＋ Add resource
-              </button>
-            </div>
-          ) : view === "table" ? (
-            <ResourceTable
-              resources={visibleResources}
-              openSetAsId={openSetAsId}
-              setOpenSetAsId={setOpenSetAsId}
-              onView={openResource}
-              onEdit={edit}
-              onDelete={remove}
-              onVerify={verify}
-              onPublish={publish}
-            />
-          ) : (
-            <ResourceGrid
-              resources={visibleResources}
-              openSetAsId={openSetAsId}
-              setOpenSetAsId={setOpenSetAsId}
-              onView={openResource}
-              onEdit={edit}
-              onDelete={remove}
-              onVerify={verify}
-              onPublish={publish}
-            />
-          )}
-        </section>
+          <footer className="dr-footer">
+            Digital Library & Electronic Equipment Management <span>·</span>
+            Mekdela Amba AI-Based Smart LMS
+          </footer>
+        </div>
 
-        <footer className="dr-footer">
-          Digital Library & Electronic Equipment Management <span>·</span>
-          Mekdela Amba AI-Based Smart LMS
-        </footer>
-      </div>
+        {/* FAB */}
+        <button
+          className="dr-fab"
+          onClick={openCreate}
+          aria-label="Add resource"
+          title="Add resource or device"
+        >
+          ＋
+        </button>
 
-      {/* FAB */}
-      <button
-        className="dr-fab"
-        onClick={openCreate}
-        aria-label="Add resource"
-        title="Add resource or device"
-      >
-        ＋
-      </button>
-
-      {viewingResource && (
-        <ResourceViewer
-          resource={viewingResource}
-          resources={visibleResources}
-          onSelectResource={(r) => setViewingResource(r)}
-          open={Boolean(viewingResource)}
-          onClose={() => setViewingResource(null)}
-        />
-      )}
+        {viewingResource && (
+          <ResourceViewer
+            resource={viewingResource}
+            resources={visibleResources}
+            onSelectResource={(r) => setViewingResource(r)}
+            open={Boolean(viewingResource)}
+            onClose={() => setViewingResource(null)}
+          />
+        )}
+      </section>
     </main>
   );
 }
@@ -1312,10 +1231,14 @@ function ResourceGrid({
               ) : (
                 <div className="dr-card-cover-fallback">{icon}</div>
               )}
-              <span className={`dr-status dr-status-overlay ${statusTone[statusKey]}`}>
+              <span
+                className={`dr-status dr-status-overlay ${statusTone[statusKey]}`}
+              >
                 <i /> {statusText[statusKey] || statusKey}
               </span>
-              {isDevice && <span className="dr-hardware-tag floating">Hardware</span>}
+              {isDevice && (
+                <span className="dr-hardware-tag floating">Hardware</span>
+              )}
             </div>
 
             <div className="dr-card-body">

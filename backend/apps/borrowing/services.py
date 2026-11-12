@@ -1,19 +1,10 @@
 
-<<<<<<< HEAD
-
-from datetime import date, timedelta
-from decimal import Decimal
-
-from django.conf import settings
-from django.db import transaction
-=======
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
 from apps.books.models import Book
 from apps.users.models import AuthorizedUser
@@ -105,17 +96,6 @@ def _notify(user, title, message):
 
 @transaction.atomic
 def issue_book(user, book_id):
-<<<<<<< HEAD
-    """Issue a book and create an in-app notification."""
-
-    borrowing_days = get_borrowing_period(user)
-
-    if not user.can_borrow():
-        raise ValueError(
-            "You have reached your maximum borrowing limit."
-        )
-=======
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
     if not user.is_approved_member():
         raise ValueError(
@@ -134,17 +114,6 @@ def issue_book(user, book_id):
     if book.available_copies <= 0:
         raise ValueError("No copies available.")
 
-<<<<<<< HEAD
-    if BorrowRecord.objects.filter(
-        user=user,
-        book=book,
-        status__in=[
-            BorrowRecord.Status.ISSUED,
-            BorrowRecord.Status.OVERDUE,
-        ],
-    ).exists():
-        raise ValueError("You already have this book.")
-=======
     active_statuses = [
         BorrowRecord.Status.PENDING,
         BorrowRecord.Status.ISSUED,
@@ -164,36 +133,10 @@ def issue_book(user, book_id):
         raise ValueError(
             "You already have an active request or borrowing for this book."
         )
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
     record = BorrowRecord.objects.create(
         user=user,
         book=book,
-<<<<<<< HEAD
-        due_date=date.today() + timedelta(days=borrowing_days),
-    )
-
-    book.available_copies -= 1
-    book.save(update_fields=["available_copies"])
-
-    Notification.objects.create(
-        user=user,
-        type="system",
-        title="Book Borrowed",
-        message=(
-            f"You borrowed '{book.title}'. "
-            f"Your borrowing period is {borrowing_days} days. "
-            f"Due date: {record.due_date}."
-        ),
-        data={
-            "borrow_id": record.id,
-            "book_id": book.id,
-            "borrowing_days": borrowing_days,
-            "due_date": str(record.due_date),
-        },
-    )
-
-=======
         due_date=date.today() + timedelta(
             days=settings.BORROW_DAYS
         ),
@@ -274,7 +217,6 @@ def approve_borrow(record_id, librarian):
         f"Your request for '{book.title}' was approved. Due date: {record.due_date}.",
     )
 
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
     return record
 
 
@@ -283,80 +225,6 @@ def approve_borrow(record_id, librarian):
 # ==========================================
 
 @transaction.atomic
-<<<<<<< HEAD
-def return_book(user, record_id):
-    """Return a borrowed book and calculate its final overdue fine."""
-
-    record = BorrowRecord.objects.select_for_update().select_related(
-        "book"
-    ).get(
-        id=record_id,
-        user=user,
-    )
-
-    if record.status == BorrowRecord.Status.RETURNED:
-        raise ValueError("This book has already been returned.")
-
-    today = date.today()
-
-    record.return_date = today
-    record.status = BorrowRecord.Status.RETURNED
-    record.fine = calculate_overdue_fine(record.due_date, today)
-
-    record.save(
-        update_fields=["return_date", "status", "fine"]
-    )
-
-    record.book.available_copies += 1
-    record.book.save(update_fields=["available_copies"])
-
-    message = f"You returned '{record.book.title}'."
-
-    if record.fine > 0:
-        message += (
-            f" Your overdue fine is ETB {record.fine}. "
-            "Please visit the Fines section to review payment options."
-        )
-
-    Notification.objects.create(
-        user=user,
-        type="return_confirmation",
-        title="Book Returned",
-        message=message,
-        data={
-            "borrow_id": record.id,
-            "book_id": record.book.id,
-            "fine": str(record.fine),
-            "currency": "ETB",
-        },
-    )
-
-    return record
-
-
-@transaction.atomic
-def mark_overdue_records():
-    """
-    Mark overdue borrowing records and update their overdue fines.
-
-    Safe to run repeatedly:
-    - Does not create duplicate overdue notifications.
-    - Recalculates the current overdue amount.
-    - Updates the existing overdue notification with current details.
-    """
-
-    today = timezone.localdate()
-
-    overdue_records = (
-        BorrowRecord.objects.filter(
-            status__in=[
-                BorrowRecord.Status.ISSUED,
-                BorrowRecord.Status.OVERDUE,
-            ],
-            due_date__lt=today,
-        )
-        .select_related("user", "book")
-=======
 def reject_borrow(record_id, librarian):
 
     record = BorrowRecord.objects.select_for_update().get(
@@ -647,70 +515,11 @@ def mark_overdue_records():
     overdue_records = BorrowRecord.objects.filter(
         status=BorrowRecord.Status.ISSUED,
         due_date__lt=today,
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
     )
 
     count = 0
 
     for record in overdue_records:
-<<<<<<< HEAD
-        days_late = (today - record.due_date).days
-
-        fine_amount = calculate_overdue_fine(
-            record.due_date,
-            today,
-        )
-
-        record.status = BorrowRecord.Status.OVERDUE
-        record.fine = fine_amount
-
-        record.save(update_fields=["status", "fine"])
-
-        notification, created = Notification.objects.get_or_create(
-            user=record.user,
-            type="overdue",
-            data__borrow_id=record.id,
-            defaults={
-                "title": "Book Overdue",
-                "message": (
-                    f"Your borrowed book '{record.book.title}' "
-                    f"is {days_late} days overdue. "
-                    f"Current fine: ETB {fine_amount}. "
-                    "Please return the book and review your fine."
-                ),
-                "data": {
-                    "borrow_id": record.id,
-                    "book_id": record.book.id,
-                    "days_overdue": days_late,
-                    "fine": str(fine_amount),
-                    "currency": "ETB",
-                    "reason": "overdue",
-                },
-            },
-        )
-
-        if not created:
-            notification.title = "Book Overdue"
-            notification.message = (
-                f"Your borrowed book '{record.book.title}' "
-                f"is {days_late} days overdue. "
-                f"Current fine: ETB {fine_amount}. "
-                "Please return the book and review your fine."
-            )
-
-            notification.data = {
-                "borrow_id": record.id,
-                "book_id": record.book.id,
-                "days_overdue": days_late,
-                "fine": str(fine_amount),
-                "currency": "ETB",
-                "reason": "overdue",
-            }
-
-            notification.save(
-                update_fields=["title", "message", "data"]
-            )
-=======
 
         days_late = (today - record.due_date).days
 
@@ -727,7 +536,6 @@ def mark_overdue_records():
                 "fine",
             ]
         )
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
         count += 1
 

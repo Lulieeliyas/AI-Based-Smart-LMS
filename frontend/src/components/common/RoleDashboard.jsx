@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import PublicDashboard from '../public/PublicDashboard';
 
 const RoleDashboard = () => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -8,11 +9,12 @@ const RoleDashboard = () => {
     return <p>Loading your dashboard...</p>;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+  // 🔓 Guest / not logged in → PUBLIC dashboard
+  if (!isAuthenticated || !user) {
+    return <PublicDashboard />;
   }
 
-  const role = String(user?.role || '').toLowerCase();
+  const role = String(user?.role || '').toLowerCase().trim();
 
   switch (role) {
     case 'admin':
@@ -27,14 +29,17 @@ const RoleDashboard = () => {
       return <Navigate to="/digital-officer/dashboard" replace />;
 
     case 'student':
-    case 'guest':
       return <Navigate to="/student/dashboard" replace />;
 
     case 'academic_staff':
       return <Navigate to="/staff/dashboard" replace />;
 
+    case 'guest':
+      return <PublicDashboard />;
+
     default:
-      return <Navigate to="/" replace />;
+      // Unknown role → show public dashboard, never a blank screen
+      return <PublicDashboard />;
   }
 };
 

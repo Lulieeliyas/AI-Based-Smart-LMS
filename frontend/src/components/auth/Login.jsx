@@ -23,16 +23,10 @@ const getDashboardPathForRole = (role) => {
     case 'student':
       return '/student/dashboard';
     case 'guest':
-<<<<<<< HEAD
       return '/public';
     default:
-      // ✅ Safe fallback — never returns undefined
-      return '/student/dashboard';
-=======
-       return '/public/PublicDashboards';
-    default:
+      return '/public';
 
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
   }
 };
 
@@ -59,36 +53,33 @@ const Login = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    const result = await login(formData.username, formData.password);
+  const result = await login(formData.username, formData.password);
 
-    if (result.success) {
-      const role = result.user?.role;
-      const target = getDashboardPathForRole(role);
+  if (result.success) {
+    const target = getDashboardPathForRole(result.user?.role);
 
-      toast.success(
-        `Welcome back, ${result.user?.first_name || result.user?.username || ''}!`
-      );
+    toast.success(
+      `Welcome back, ${result.user?.first_name || result.user?.username || ''}!`
+    );
 
-      // ✅ Redirect to the dashboard that belongs to this role
-      navigate(target, { replace: true });
-    } else {
-      setError(result.error || 'Login failed. Please check your credentials.');
+    navigate(target, { replace: true });
+  } else {
+    setError(result.error || 'Login failed. Please check your credentials.');
 
-      // ✅ If email is not verified, redirect to verify page
-      if (result.requiresVerification) {
-        toast.info('Please verify your account to continue.');
-        setTimeout(() => {
-          navigate('/verify-email', { state: { email: result.email } });
-        }, 1500);
-      }
+    if (result.requiresVerification) {
+      toast.info('Please verify your account to continue.');
+      setTimeout(() => {
+        navigate('/verify-email', { state: { email: result.email } });
+      }, 1500);
     }
-    setLoading(false);
-  };
+  }
+  setLoading(false);
+};
 
   const showEyeIcon = formData.password.length > 0;
 

@@ -139,37 +139,6 @@ TIME_ZONE = 'Africa/Addis_Ababa'
 USE_I18N = True
 USE_TZ = True
 
-<<<<<<< HEAD
-# Borrowing and fine policies
-
-BORROW_DAYS_STUDENT = int(
-    os.getenv("STUDENT_BORROW_DAYS", "14")
-)
-
-BORROW_DAYS_HEALTH_STUDENT = int(
-    os.getenv("HEALTH_STUDENT_BORROW_DAYS", "30")
-)
-
-BORROW_DAYS_LAW_STUDENT = int(
-    os.getenv("LAW_STUDENT_BORROW_DAYS", "30")
-)
-
-BORROW_DAYS_ACADEMIC_STAFF = int(
-    os.getenv("ACADEMIC_STAFF_BORROW_DAYS", "30")
-)
-
-BORROW_DAYS_OTHER = int(
-    os.getenv("OTHER_BORROW_DAYS", "14")
-)
-
-# Keep the old setting for compatibility.
-BORROW_DAYS = BORROW_DAYS_STUDENT
-
-FINE_PER_DAY = Decimal(os.getenv("FINE_PER_DAY", "5"))
-FINE_CURRENCY = "ETB"
-
-=======
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 # ==========================================
 # STATIC & MEDIA FILES
 # ==========================================
@@ -184,19 +153,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-<<<<<<< HEAD
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "https://ai-based-smart-lms.vercel.app",
-]
-=======
 # ==========================================
 # CORS & CSRF SETTINGS
 # ==========================================
@@ -215,7 +171,6 @@ env_csrf = os.getenv(
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,https://ai-based-smart-lms.vercel.app,https://ai-library-backend-u07r.onrender.com"
 )
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in env_csrf.split(',') if origin.strip()]
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
@@ -352,12 +307,12 @@ AI_UPDATE_INTERVAL_HOURS = 24
 # ============ EMAIL CONFIGURATION ============
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@library.com')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'lulieeliyas@gmail.com')
 
 EMAIL_TIMEOUT = 30
 
@@ -374,7 +329,7 @@ TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
-SKIP_EMAIL_VERIFICATION = False
+SKIP_EMAIL_VERIFICATION = True
 
 # Chapa Payment Configuration
 CHAPA_SECRET_KEY = os.getenv('CHAPA_SECRET_KEY', 'your-chapa-secret-key')

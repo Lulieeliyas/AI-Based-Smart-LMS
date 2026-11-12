@@ -1,13 +1,7 @@
 
-<<<<<<< HEAD
-from django.db.models import Q, Count
-from django.utils import timezone
-
-=======
 from datetime import date
 
 from django.db.models import Q
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -45,8 +39,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-<<<<<<< HEAD
-=======
 
         qs = BorrowRecord.objects.select_related(
             "user",
@@ -62,7 +54,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
     # -----------------------------------------
     # STUDENT: CHECK BORROWING ELIGIBILITY
     # -----------------------------------------
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
         queryset = BorrowRecord.objects.select_related(
             "user",
@@ -127,47 +118,14 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
             ),
         })
 
-<<<<<<< HEAD
-    # ------------------------------------------------
-    # ISSUE A BOOK
-    # ------------------------------------------------
-
-    @action(
-        detail=False,
-        methods=["post"],
-        url_path="issue",
-    )
-=======
     # -----------------------------------------
     # STUDENT: SUBMIT BORROWING REQUEST
     # -----------------------------------------
 
     @action(detail=False, methods=["post"], url_path="issue")
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
     def issue(self, request):
 
         book_id = request.data.get("book_id")
-<<<<<<< HEAD
-
-        if book_id is None:
-            return Response(
-                {"detail": "book_id is required."},
-                status=400,
-            )
-
-        try:
-            rec = issue_book(
-                request.user,
-                int(book_id),
-            )
-
-        except (ValueError, TypeError):
-            return Response(
-                {"detail": "book_id must be an integer."},
-                status=400,
-            )
-
-=======
 
         if book_id is None:
             return Response(
@@ -267,7 +225,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
                 request.user,
                 int(pk),
             )
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
         except Exception as exc:
             return Response(
                 {"detail": str(exc)},
@@ -275,15 +232,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         return Response(
-<<<<<<< HEAD
-            BorrowRecordSerializer(rec).data,
-            status=201,
-        )
-
-    # ------------------------------------------------
-    # RETURN A BOOK
-    # ------------------------------------------------
-=======
             self.get_serializer(record).data
         )
 
@@ -309,29 +257,10 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
     # -----------------------------------------
     # LIBRARIAN: INSPECT RETURNED BOOK
     # -----------------------------------------
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
     @action(
         detail=True,
         methods=["post"],
-<<<<<<< HEAD
-        url_path="return",
-    )
-    def return_book(self, request, pk=None):
-
-        try:
-            rec = return_book(
-                request.user,
-                int(pk),
-            )
-
-        except (ValueError, TypeError):
-            return Response(
-                {"detail": "Invalid borrow id."},
-                status=400,
-            )
-
-=======
         permission_classes=[IsLibrarianOrAdmin],
         url_path="inspect-return",
     )
@@ -344,7 +273,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
                 request.data.get("damage_notes", ""),
                 request.data.get("damage_fine", "0"),
             )
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
         except Exception as exc:
             return Response(
                 {"detail": str(exc)},
@@ -352,102 +280,6 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         return Response(
-<<<<<<< HEAD
-            BorrowRecordSerializer(rec).data
-        )
-
-    # ------------------------------------------------
-    # ALL BORROWINGS - ADMIN / LIBRARIAN
-    # ------------------------------------------------
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="all",
-    )
-    def all_borrowings(self, request):
-
-        denied = self.staff_only(request)
-
-        if denied:
-            return denied
-
-        records = self.get_queryset()
-
-        serializer = self.get_serializer(
-            records,
-            many=True,
-        )
-
-        return Response(serializer.data)
-
-    # ------------------------------------------------
-    # ACTIVE BORROWINGS
-    # ------------------------------------------------
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="active",
-    )
-    def active_borrowings(self, request):
-
-        denied = self.staff_only(request)
-
-        if denied:
-            return denied
-
-        records = self.get_queryset().filter(
-            status__in=[
-                BorrowRecord.Status.ISSUED,
-                BorrowRecord.Status.OVERDUE,
-            ]
-        )
-
-        serializer = self.get_serializer(
-            records,
-            many=True,
-        )
-
-        return Response(serializer.data)
-
-    # ------------------------------------------------
-    # OVERDUE BORROWINGS
-    # ------------------------------------------------
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="overdue",
-    )
-    def overdue_borrowings(self, request):
-
-        denied = self.staff_only(request)
-
-        if denied:
-            return denied
-
-        today = timezone.localdate()
-
-        records = self.get_queryset().filter(
-            Q(status=BorrowRecord.Status.OVERDUE)
-            | Q(
-                status=BorrowRecord.Status.ISSUED,
-                due_date__lt=today,
-            )
-        )
-
-        serializer = self.get_serializer(
-            records,
-            many=True,
-        )
-
-        return Response(serializer.data)
-
-    # ------------------------------------------------
-    # BORROWING STATISTICS
-    # ------------------------------------------------
-=======
             self.get_serializer(record).data
         )
 
@@ -507,55 +339,10 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
     # -----------------------------------------
     # LIBRARIAN: BORROWING STATISTICS
     # -----------------------------------------
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
     @action(
         detail=False,
         methods=["get"],
-<<<<<<< HEAD
-        url_path="statistics",
-    )
-    def statistics(self, request):
-
-        denied = self.staff_only(request)
-
-        if denied:
-            return denied
-
-        today = timezone.localdate()
-
-        records = self.get_queryset()
-
-        active = records.filter(
-            status__in=[
-                BorrowRecord.Status.ISSUED,
-                BorrowRecord.Status.OVERDUE,
-            ]
-        ).count()
-
-        overdue = records.filter(
-            Q(status=BorrowRecord.Status.OVERDUE)
-            | Q(
-                status=BorrowRecord.Status.ISSUED,
-                due_date__lt=today,
-            )
-        ).count()
-
-        returned = records.filter(
-            status=BorrowRecord.Status.RETURNED
-        ).count()
-
-        return Response({
-            "total_borrowings": records.count(),
-            "active_borrowings": active,
-            "overdue_borrowings": overdue,
-            "returned_borrowings": returned,
-        })
-
-    # ------------------------------------------------
-    # PERSONAL BORROWING STATISTICS
-    # ------------------------------------------------
-=======
         permission_classes=[IsLibrarianOrAdmin],
     )
     def statistics(self, request):
@@ -608,24 +395,10 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
     # -----------------------------------------
     # LIBRARIAN: ALL BORROWING RECORDS
     # -----------------------------------------
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
 
     @action(
         detail=False,
         methods=["get"],
-<<<<<<< HEAD
-        url_path="my-statistics",
-    )
-    def my_statistics(self, request):
-
-        records = BorrowRecord.objects.filter(
-            user=request.user
-        )
-
-        today = timezone.localdate()
-
-        active = records.filter(
-=======
         permission_classes=[IsLibrarianOrAdmin],
     )
     def all(self, request):
@@ -647,33 +420,10 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
     )
     def active(self, request):
         qs = self.get_queryset().filter(
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
             status__in=[
                 BorrowRecord.Status.ISSUED,
                 BorrowRecord.Status.OVERDUE,
             ]
-<<<<<<< HEAD
-        ).count()
-
-        overdue = records.filter(
-            Q(status=BorrowRecord.Status.OVERDUE)
-            | Q(
-                status=BorrowRecord.Status.ISSUED,
-                due_date__lt=today,
-            )
-        ).count()
-
-        returned = records.filter(
-            status=BorrowRecord.Status.RETURNED
-        ).count()
-
-        return Response({
-            "total_borrowings": records.count(),
-            "active_borrowings": active,
-            "overdue_borrowings": overdue,
-            "returned_borrowings": returned,
-        })
-=======
         )
 
         return Response(
@@ -701,4 +451,3 @@ class BorrowViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(
             self.get_serializer(qs, many=True).data
         )
->>>>>>> 3d92b850 (Implement librarian return inspection and fine management)
