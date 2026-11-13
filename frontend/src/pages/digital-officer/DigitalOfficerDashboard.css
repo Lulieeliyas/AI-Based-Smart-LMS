@@ -1,17 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap'); */
 
 /* =====================================================================
    DESIGN TOKENS — light canvas, no sidebar
    ===================================================================== */
 :root {
-  --dr-bg:               #f7f8fb;
-  --dr-surface:          #ffffff;
-  --dr-surface-alt:      #f9fafc;
-  --dr-border:           #e6e8ee;
+
   --dr-border-strong:    #d4d8e0;
   --dr-border-accent:    #c7d2fe;
-  --dr-text:             #0f172a;
-  --dr-text-body:        #334155;
   --dr-text-muted:       #64748b;
   --dr-text-dim:         #94a3b8;
   --dr-accent:           #6366f1;
@@ -57,7 +52,6 @@
 
 .dr-topbar {
   height: 69px;
-  background: #fff;
   border-bottom: 1px solid var(--dr-border);
   display: flex;
   align-items: center;

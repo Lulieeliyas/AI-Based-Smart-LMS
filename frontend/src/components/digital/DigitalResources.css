@@ -3,12 +3,7 @@
    ============================================================ */
 
 .dr-page {
-  --dr-bg: #f7f8fb;
-  --dr-surface: #ffffff;
-  --dr-border: #e6e8ee;
   --dr-border-strong: #d4d8e0;
-  --dr-text: #0f172a;
-  --dr-text-body: #334155;
   --dr-text-muted: #64748b;
   --dr-text-dim: #94a3b8;
   --dr-accent: #6366f1;

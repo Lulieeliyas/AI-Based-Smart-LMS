@@ -1,4 +1,3 @@
-// src/components/digital/DigitalResources.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';

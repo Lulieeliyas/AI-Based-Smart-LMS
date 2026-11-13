@@ -812,7 +812,7 @@ export default function DigitalOfficerDashboard() {
               </div>
             </div>
 
-            {/* Category pills */}
+            Category pills
             <div className="dr-filter-row">
               <span className="dr-filter-label">Categories</span>
               <div className="dr-pills">
@@ -940,11 +940,6 @@ export default function DigitalOfficerDashboard() {
               />
             )}
           </section>
-
-          <footer className="dr-footer">
-            Digital Library & Electronic Equipment Management <span>·</span>
-            Mekdela Amba AI-Based Smart LMS
-          </footer>
         </div>
 
         {/* FAB */}
